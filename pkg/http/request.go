@@ -2,13 +2,11 @@ package http
 
 import (
 	"bytes"
-	"fmt"
 	"net/http"
-	"net/http/httputil"
 	"time"
 )
 
-// RequestOptions holds the data that builds the HTTP request
+// RequestOptions is a http struct that holds the data that builds the HTTP request
 type RequestOptions struct {
 	Method        string
 	BaseURI       string
@@ -21,16 +19,11 @@ type RequestOptions struct {
 	ProxyURI      string
 }
 
-// Request is a method for sending a HTTP request
-func Request(requestOptions RequestOptions) *http.Response {
+// CreateRequest is a http function for creating a HTTP request based on request options
+func CreateRequest(requestOptions RequestOptions) *http.Request {
 	uri := buildURI(requestOptions.BaseURI, requestOptions.Endpoint, requestOptions.RequestParams)
 	body := buildBody(requestOptions.ContentType, requestOptions.BodyParams)
 	contentType := buildContentType(requestOptions.ContentType)
-
-	timeout := time.Duration(5 * time.Second)
-	client := &http.Client{
-		Timeout: timeout,
-	}
 
 	req, err := http.NewRequest(requestOptions.Method, uri, bytes.NewBuffer(body))
 	if err != nil {
@@ -42,11 +35,15 @@ func Request(requestOptions RequestOptions) *http.Response {
 	}
 	req.Header.Set("Content-Type", contentType)
 
-	reqDump, err := httputil.DumpRequest(req, true)
-	if err != nil {
-		panic(err)
+	return req
+}
+
+// SendRequest is a http function for sending a HTTP request and returns the response
+func SendRequest(req *http.Request) *http.Response {
+	timeout := time.Duration(5 * time.Second)
+	client := &http.Client{
+		Timeout: timeout,
 	}
-	fmt.Println(string(reqDump))
 
 	resp, err := client.Do(req)
 	if err != nil {
