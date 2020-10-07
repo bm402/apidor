@@ -2,19 +2,31 @@ package main
 
 import (
 	"flag"
-	"fmt"
 	"net/http/httputil"
 
+	"github.com/bncrypted/apidor/internal/apidor/logger"
 	"github.com/bncrypted/apidor/pkg/definition"
 	"github.com/bncrypted/apidor/pkg/http"
 )
 
 func main() {
-	definitionFile := flag.String("d", "definitions/sample.yml", "Path to the API definition YAML file")
+	flags := logger.Flags{
+		DefinitionFile: flag.String("d", "definitions/sample.yml", "Path to the API definition YAML file"),
+		LogFile:        flag.String("o", "", "Log file name"),
+		IsDebug:        flag.Bool("debug", false, "Specifies whether to use debugging mode for verbose output"),
+	}
 	flag.Parse()
 
-	def := definition.Read(*definitionFile)
+	logger.Init(flags)
+	defer logger.Close()
+	logger.Logo()
 
+	def := definition.Read(*flags.DefinitionFile)
+
+	logger.RunInfo(def.BaseURI, len(def.API.Endpoints), flags)
+	logger.Starting()
+
+	logger.TestPrefix("users.info", "happy-path")
 	endpoint := def.API.Endpoints["users.info"]
 	headers := make(map[string]string)
 	for headerName, headerValue := range endpoint.Headers {
@@ -32,12 +44,23 @@ func main() {
 		BodyParams:    endpoint.BodyParams,
 	}
 
-	resp := http.Request(requestOptions)
+	req := http.CreateRequest(requestOptions)
+	reqDump, err := httputil.DumpRequest(req, true)
+	if err != nil {
+		panic(err)
+	}
+	logger.DebugMessage(string(reqDump))
+
+	resp := http.SendRequest(req)
 	defer resp.Body.Close()
 
 	respDump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println(string(respDump))
+	logger.DebugMessage(string(respDump))
+
+	logger.TestResult(resp.Status)
+
+	logger.Finished()
 }
