@@ -1,7 +1,6 @@
 package definition
 
 import (
-	"fmt"
 	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
@@ -40,17 +39,17 @@ type EndpointDetails struct {
 	BodyParams    map[string]interface{} `yaml:"body_params"`
 }
 
-// ReadDefinition reads the API definition from the given YAML file
-func ReadDefinition(path string) Definition {
-	buf, err := ioutil.ReadFile(path)
+// Read is a function that reads the API definition from the given YAML file
+func Read(filepath string) Definition {
+	buf, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		fmt.Println("Error reading definition file: ", err.Error())
+		panic(err)
 	}
 
 	var definition Definition
 	err = yaml.Unmarshal(buf, &definition)
 	if err != nil {
-		fmt.Println("YAML parsing error")
+		panic(err)
 	}
 
 	return definition
