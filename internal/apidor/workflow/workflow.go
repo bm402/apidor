@@ -1,6 +1,8 @@
 package workflow
 
 import (
+	externalhttp "net/http"
+
 	"github.com/bncrypted/apidor/internal/apidor/logger"
 	"github.com/bncrypted/apidor/pkg/definition"
 	"github.com/bncrypted/apidor/pkg/http"
@@ -17,6 +19,8 @@ type apiSummary struct {
 	globalMethods []string
 }
 
+type verifier func(*externalhttp.Response) string
+
 // Run is a workflow function that orchestrates the API testing
 func Run(definition definition.Definition, flags Flags) {
 
@@ -30,36 +34,38 @@ func Run(definition definition.Definition, flags Flags) {
 	for endpoint, endpointDetails := range definition.API.Endpoints {
 		requestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
 		testNamePrefix := "token"
-		testEndpointWithDifferentAuthTokens(requestOptions, apiSummary.authDetails, testNamePrefix)
+		testEndpointWithAllLevelsOfAuthentication(requestOptions, apiSummary.authDetails, testNamePrefix)
 	}
 }
 
-func testEndpointWithDifferentAuthTokens(requestOptions http.RequestOptions,
+func testEndpointWithAllLevelsOfAuthentication(requestOptions http.RequestOptions,
 	authDetails definition.AuthDetails, testNamePrefix string) {
 
-	// high privileged token
-	testName := testNamePrefix + "-high"
+	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-high",
+		authDetails.High, verifyResponseExpectedOK)
+	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-low",
+		authDetails.Low, verifyResponseExpectedUnauthorised)
+	testEndpointWithoutAuthToken(requestOptions, authDetails, testNamePrefix+"-none",
+		verifyResponseExpectedUnauthorised)
+}
+
+func testEndpointWithAuthToken(requestOptions http.RequestOptions,
+	authDetails definition.AuthDetails, testName string, token string, verifier verifier) {
+
 	logger.TestPrefix(requestOptions.Endpoint, testName)
-	highPrivilegedAuthHeaderValue := buildAuthHeaderValue(authDetails.HeaderValuePrefix, authDetails.High)
-	requestOptions.Headers = addHeader(requestOptions.Headers, authDetails.HeaderName, highPrivilegedAuthHeaderValue)
+	authHeaderValue := buildAuthHeaderValue(authDetails.HeaderValuePrefix, token)
+	requestOptions.Headers = addHeader(requestOptions.Headers, authDetails.HeaderName, authHeaderValue)
 	response := buildAndSendRequest(requestOptions)
-	result := verifyResponseExpectedOK(response)
+	result := verifier(response)
 	logger.TestResult(result)
+}
 
-	// low privileged token
-	testName = testNamePrefix + "-low"
-	logger.TestPrefix(requestOptions.Endpoint, testName)
-	lowPrivilegedAuthHeaderValue := buildAuthHeaderValue(authDetails.HeaderValuePrefix, authDetails.Low)
-	requestOptions.Headers = addHeader(requestOptions.Headers, authDetails.HeaderName, lowPrivilegedAuthHeaderValue)
-	response = buildAndSendRequest(requestOptions)
-	result = verifyResponseExpectedUnauthorised(response)
-	logger.TestResult(result)
+func testEndpointWithoutAuthToken(requestOptions http.RequestOptions,
+	authDetails definition.AuthDetails, testName string, verifier verifier) {
 
-	// no token
-	testName = testNamePrefix + "-none"
 	logger.TestPrefix(requestOptions.Endpoint, testName)
 	requestOptions.Headers = removeHeader(requestOptions.Headers, authDetails.HeaderName)
-	response = buildAndSendRequest(requestOptions)
-	result = verifyResponseExpectedUnauthorised(response)
+	response := buildAndSendRequest(requestOptions)
+	result := verifier(response)
 	logger.TestResult(result)
 }
