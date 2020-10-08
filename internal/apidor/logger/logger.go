@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// Flags is a logger struct that holds the flags given to the program
+// Flags is a logger struct that holds command line flags for customising the logging output
 type Flags struct {
 	DefinitionFile *string
 	LogFile        *string
@@ -98,7 +98,7 @@ func Finished() {
 	if !isDebug {
 		writeln("")
 	}
-	writeln("Done. Nice one 👊")
+	writeln("Done, nice one 👊")
 	writeln("")
 }
 
