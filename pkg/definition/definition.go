@@ -8,10 +8,10 @@ import (
 
 // Definition is a full model of the YAML definition file
 type Definition struct {
-	BaseURI     string           `yaml:"base"`
-	AuthDetails AuthDetails      `yaml:"auth"`
-	Vars        map[string][]int `yaml:"vars"`
-	API         APIDetails       `yaml:"api"`
+	BaseURI     string               `yaml:"base"`
+	AuthDetails AuthDetails          `yaml:"auth"`
+	Vars        map[string]Variables `yaml:"vars"`
+	API         APIDetails           `yaml:"api"`
 }
 
 // AuthDetails is a model of the authentication header details
@@ -20,6 +20,12 @@ type AuthDetails struct {
 	HeaderValuePrefix string `yaml:"header_value_prefix"`
 	High              string `yaml:"high_privileged_access_token"`
 	Low               string `yaml:"low_privileged_access_token"`
+}
+
+// Variables is a model of high and low privileged variables
+type Variables struct {
+	High interface{} `yaml:"high"`
+	Low  interface{} `yaml:"low"`
 }
 
 // APIDetails is a model for the API details
