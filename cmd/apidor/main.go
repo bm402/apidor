@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"os"
 
 	"github.com/bncrypted/apidor/internal/apidor/logger"
 	"github.com/bncrypted/apidor/internal/apidor/workflow"
@@ -20,12 +21,16 @@ func main() {
 	defer logger.Close()
 	logger.Logo()
 
-	def := definition.Read(*flags.DefinitionFile)
+	definition, err := definition.Read(*flags.DefinitionFile)
+	if err != nil {
+		logger.Fatal(err.Error())
+		os.Exit(1)
+	}
 
-	logger.RunInfo(def.BaseURI, len(def.API.Endpoints), flags)
+	logger.RunInfo(definition.BaseURI, len(definition.API.Endpoints), flags)
 	logger.Starting()
 
-	workflow.Run(def, workflow.Flags{})
+	workflow.Run(definition, workflow.Flags{})
 
 	logger.Finished()
 }

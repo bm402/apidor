@@ -40,17 +40,18 @@ type EndpointDetails struct {
 }
 
 // Read is a function that reads the API definition from the given YAML file
-func Read(filepath string) Definition {
+func Read(filepath string) (Definition, error) {
+	var definition Definition
+
 	buf, err := ioutil.ReadFile(filepath)
 	if err != nil {
-		panic(err)
+		return definition, err
 	}
 
-	var definition Definition
 	err = yaml.Unmarshal(buf, &definition)
 	if err != nil {
-		panic(err)
+		return definition, err
 	}
 
-	return definition
+	return definition, nil
 }

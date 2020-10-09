@@ -2,6 +2,7 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 func buildURI(baseURI string, endpoint string, requestParams map[string]string) string {
@@ -32,32 +33,30 @@ func buildURI(baseURI string, endpoint string, requestParams map[string]string) 
 	return uri
 }
 
-func buildBody(contentType string, bodyParams map[string]interface{}) []byte {
+func buildBody(encodedContentType string, bodyParams map[string]interface{}) ([]byte, error) {
 	var body []byte
-	switch contentType {
+	var err error
+	switch encodedContentType {
 	case "JSON":
-		body = buildJSONBody(bodyParams)
+		body, err = json.Marshal(bodyParams)
+		if err != nil {
+			return nil, err
+		}
 	default:
-		panic("Unknown content type")
+		return nil, errors.New("Unknown content type \"" + encodedContentType + "\"")
 	}
-	return body
+	return body, nil
 }
 
-func buildJSONBody(bodyParams map[string]interface{}) []byte {
-	body, err := json.Marshal(bodyParams)
-	if err != nil {
-		panic(err)
-	}
-	return body
-}
-
-func buildContentType(encodedContentType string) string {
+func buildContentType(encodedContentType string) (string, error) {
 	contentType := ""
 	switch encodedContentType {
 	case "JSON":
 		contentType += "application/json"
 	case "FORM-DATA":
 		contentType += "application/x-www-form-urlencoded"
+	default:
+		return "", errors.New("Unknown content type \"" + encodedContentType + "\"")
 	}
-	return contentType
+	return contentType, nil
 }

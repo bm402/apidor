@@ -24,23 +24,32 @@ func buildEndpointRequestOptions(apiSummary apiSummary, endpointName string,
 	return requestOptions
 }
 
-func buildAndSendRequest(requestOptions http.RequestOptions) *externalhttp.Response {
-	request := http.CreateRequest(requestOptions)
+func buildAndSendRequest(requestOptions http.RequestOptions) (*externalhttp.Response, error) {
+	request, err := http.CreateRequest(requestOptions)
+	if err != nil {
+		return nil, err
+	}
+
 	requestDump, err := httputil.DumpRequest(request, true)
 	if err != nil {
-		panic(err)
+		logger.DebugError(err.Error())
+	} else {
+		logger.DebugMessage(string(requestDump))
 	}
-	logger.DebugMessage(string(requestDump))
 
-	response := http.SendRequest(request)
+	response, err := http.SendRequest(request)
+	if err != nil {
+		return nil, err
+	}
 
 	responseDump, err := httputil.DumpResponse(response, true)
 	if err != nil {
-		panic(err)
+		logger.DebugError(err.Error())
+	} else {
+		logger.DebugMessage(string(responseDump))
 	}
-	logger.DebugMessage(string(responseDump))
 
-	return response
+	return response, nil
 }
 
 func mergeGlobalAndLocalHeaders(globalHeaders map[string]string, localHeaders map[string]string) map[string]string {
