@@ -33,6 +33,8 @@ func Run(definition definition.Definition, flags Flags) {
 
 	for endpoint, endpointDetails := range definition.API.Endpoints {
 		requestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
+		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
+
 		testNamePrefix := "token"
 		testEndpointWithAllLevelsOfAuthentication(requestOptions, apiSummary.authDetails, testNamePrefix)
 	}
