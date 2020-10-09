@@ -55,7 +55,12 @@ func testEndpointWithAuthToken(requestOptions http.RequestOptions,
 	logger.TestPrefix(requestOptions.Endpoint, testName)
 	authHeaderValue := buildAuthHeaderValue(authDetails.HeaderValuePrefix, token)
 	requestOptions.Headers = addHeader(requestOptions.Headers, authDetails.HeaderName, authHeaderValue)
-	response := buildAndSendRequest(requestOptions)
+
+	response, err := buildAndSendRequest(requestOptions)
+	if err != nil {
+		logger.Message("Skipping due to error: " + err.Error())
+	}
+
 	result := verifier(response)
 	logger.TestResult(result)
 }
@@ -65,7 +70,12 @@ func testEndpointWithoutAuthToken(requestOptions http.RequestOptions,
 
 	logger.TestPrefix(requestOptions.Endpoint, testName)
 	requestOptions.Headers = removeHeader(requestOptions.Headers, authDetails.HeaderName)
-	response := buildAndSendRequest(requestOptions)
+
+	response, err := buildAndSendRequest(requestOptions)
+	if err != nil {
+		logger.Message("Skipping due to error: " + err.Error())
+	}
+
 	result := verifier(response)
 	logger.TestResult(result)
 }

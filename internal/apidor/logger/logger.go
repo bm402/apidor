@@ -34,7 +34,8 @@ func initFile(filename string) {
 	var err error
 	logfile, err = os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		panic(err)
+		isWriteToFile = false
+		Error("Could not open logfile, continuing without writing to file")
 	}
 }
 
@@ -47,7 +48,7 @@ func Close() {
 	if isWriteToFile {
 		err := logfile.Close()
 		if err != nil {
-			panic(err)
+			Error("Could not close logfile")
 		}
 	}
 }
@@ -128,9 +129,30 @@ func Message(message string) {
 // DebugMessage is a logger function that prints if the debug flag is set
 func DebugMessage(message string) {
 	if isDebug {
-		writeln(message)
+		Message(message)
 		writeln("")
 	}
+}
+
+// Error is a logger function that prints an error message
+func Error(message string) {
+	writeln("Error: " + message)
+}
+
+// DebugError is a logger function that prints an error message if the debug flag is set
+func DebugError(message string) {
+	if isDebug {
+		Error(message)
+		writeln("")
+	}
+}
+
+// Fatal is a logger function that prints a fatal error message
+func Fatal(message string) {
+	writeln("")
+	writeln("Fatal: " + message)
+	writeln("Exiting")
+	writeln("")
 }
 
 func write(message string) {

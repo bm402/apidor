@@ -20,14 +20,20 @@ type RequestOptions struct {
 }
 
 // CreateRequest is a http function for creating a HTTP request based on request options
-func CreateRequest(requestOptions RequestOptions) *http.Request {
+func CreateRequest(requestOptions RequestOptions) (*http.Request, error) {
 	uri := buildURI(requestOptions.BaseURI, requestOptions.Endpoint, requestOptions.RequestParams)
-	body := buildBody(requestOptions.ContentType, requestOptions.BodyParams)
-	contentType := buildContentType(requestOptions.ContentType)
+	body, err := buildBody(requestOptions.ContentType, requestOptions.BodyParams)
+	if err != nil {
+		return nil, err
+	}
+	contentType, err := buildContentType(requestOptions.ContentType)
+	if err != nil {
+		return nil, err
+	}
 
 	req, err := http.NewRequest(requestOptions.Method, uri, bytes.NewBuffer(body))
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
 	for headerName, headerValue := range requestOptions.Headers {
@@ -35,11 +41,11 @@ func CreateRequest(requestOptions RequestOptions) *http.Request {
 	}
 	req.Header.Set("Content-Type", contentType)
 
-	return req
+	return req, nil
 }
 
 // SendRequest is a http function for sending a HTTP request and returns the response
-func SendRequest(req *http.Request) *http.Response {
+func SendRequest(req *http.Request) (*http.Response, error) {
 	timeout := time.Duration(5 * time.Second)
 	client := &http.Client{
 		Timeout: timeout,
@@ -47,8 +53,8 @@ func SendRequest(req *http.Request) *http.Response {
 
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
 
-	return resp
+	return resp, nil
 }
