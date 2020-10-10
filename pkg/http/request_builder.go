@@ -1,8 +1,14 @@
 package http
 
 import (
+	"crypto/tls"
+	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"io/ioutil"
+	"net/http"
+	"net/url"
+	"time"
 )
 
 func buildURI(baseURI string, endpoint string, requestParams map[string]string) string {
@@ -59,4 +65,86 @@ func buildContentType(encodedContentType string) (string, error) {
 		return "", errors.New("Unknown content type \"" + encodedContentType + "\"")
 	}
 	return contentType, nil
+}
+
+func buildClient() (*http.Client, error) {
+	timeout := time.Duration(5 * time.Second)
+	transport, err := buildClientTransport()
+	if err != nil {
+		return nil, err
+	}
+
+	client := &http.Client{
+		Timeout:   timeout,
+		Transport: transport,
+	}
+
+	return client, nil
+}
+
+func buildClientTransport() (*http.Transport, error) {
+	var proxyURL *url.URL
+	var tlsClientConfig *tls.Config
+	var err error
+
+	if isProxy {
+		proxyURL, err = buildProxyURL(proxyURI)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	if isLocalCert {
+		rootCAs, err := buildRootCAs(localCertFile)
+		if err != nil {
+			return nil, err
+		}
+		tlsClientConfig = &tls.Config{
+			RootCAs: rootCAs,
+		}
+	}
+
+	transport := &http.Transport{}
+	if isProxy && isLocalCert {
+		transport = &http.Transport{
+			Proxy:           http.ProxyURL(proxyURL),
+			TLSClientConfig: tlsClientConfig,
+		}
+	} else if isProxy {
+		transport = &http.Transport{
+			Proxy: http.ProxyURL(proxyURL),
+		}
+	} else if isLocalCert {
+		transport = &http.Transport{
+			TLSClientConfig: tlsClientConfig,
+		}
+	}
+
+	return transport, nil
+}
+
+func buildProxyURL(proxyURI string) (*url.URL, error) {
+	proxyURL, err := url.Parse(proxyURI)
+	if err != nil {
+		return nil, errors.New("Could not parse proxy URI")
+	}
+	return proxyURL, nil
+}
+
+func buildRootCAs(certFile string) (*x509.CertPool, error) {
+	rootCAs, _ := x509.SystemCertPool()
+	if rootCAs == nil {
+		rootCAs = x509.NewCertPool()
+	}
+
+	cert, err := ioutil.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+
+	if ok := rootCAs.AppendCertsFromPEM(cert); !ok {
+		return nil, errors.New("Could not append cert, using system certs only")
+	}
+
+	return rootCAs, nil
 }

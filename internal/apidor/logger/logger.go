@@ -9,9 +9,11 @@ import (
 
 // Flags is a logger struct that holds command line flags for customising the logging output
 type Flags struct {
-	DefinitionFile *string
-	LogFile        *string
-	IsDebug        *bool
+	DefinitionFile string
+	LocalCertFile  string
+	LogFile        string
+	ProxyURI       string
+	IsDebug        bool
 }
 
 var isDebug bool
@@ -20,8 +22,8 @@ var logfile *os.File
 
 // Init is a logger function that initialises the logger based on the given flags
 func Init(flags Flags) {
-	initFile(*flags.LogFile)
-	initDebug(*flags.IsDebug)
+	initFile(flags.LogFile)
+	initDebug(flags.IsDebug)
 }
 
 func initFile(filename string) {
@@ -75,13 +77,19 @@ func RunInfo(baseURI string, endpointsCount int, flags Flags) {
 	writeln("Endpoints: " + strconv.Itoa(endpointsCount))
 	writeln("Time: " + time.Now().String())
 
-	if *flags.DefinitionFile != "" {
-		writeln("Definition: " + *flags.DefinitionFile)
+	if flags.LocalCertFile != "" {
+		writeln("Cert: " + flags.LocalCertFile)
 	}
-	if *flags.LogFile != "" {
-		writeln("Log: " + *flags.LogFile)
+	if flags.DefinitionFile != "" {
+		writeln("Definition: " + flags.DefinitionFile)
 	}
-	if *flags.IsDebug {
+	if flags.LogFile != "" {
+		writeln("Log: " + flags.LogFile)
+	}
+	if flags.ProxyURI != "" {
+		writeln("Proxy: " + flags.ProxyURI)
+	}
+	if flags.IsDebug {
 		writeln("Debugging: on")
 	}
 
