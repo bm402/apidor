@@ -13,6 +13,7 @@ type Flags struct {
 	LocalCertFile  string
 	LogFile        string
 	ProxyURI       string
+	Rate           int
 	IsDebug        bool
 }
 
@@ -76,6 +77,7 @@ func RunInfo(baseURI string, endpointsCount int, flags Flags) {
 	writeln("API: " + baseURI)
 	writeln("Endpoints: " + strconv.Itoa(endpointsCount))
 	writeln("Time: " + time.Now().String())
+	writeln("")
 
 	if flags.LocalCertFile != "" {
 		writeln("Cert: " + flags.LocalCertFile)
@@ -89,6 +91,7 @@ func RunInfo(baseURI string, endpointsCount int, flags Flags) {
 	if flags.ProxyURI != "" {
 		writeln("Proxy: " + flags.ProxyURI)
 	}
+	writeln("Rate: " + strconv.Itoa(flags.Rate) + " req/s")
 	if flags.IsDebug {
 		writeln("Debugging: on")
 	}
