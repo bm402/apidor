@@ -15,6 +15,7 @@ func main() {
 	localCertFile := flag.String("cert", "", "Path to a local certificate authority file")
 	logFile := flag.String("o", "", "Log file name")
 	proxyURI := flag.String("proxy", "", "Gives a URI to proxy HTTP traffic through")
+	rate := flag.Int("rate", 5, "Specifies maximum number of requests made per second")
 	isDebug := flag.Bool("debug", false, "Specifies whether to use debugging mode for verbose output")
 	flag.Parse()
 
@@ -30,6 +31,7 @@ func main() {
 		LocalCertFile:  *localCertFile,
 		LogFile:        *logFile,
 		ProxyURI:       *proxyURI,
+		Rate:           *rate,
 		IsDebug:        *isDebug,
 	}
 
@@ -46,7 +48,10 @@ func main() {
 	logger.RunInfo(definition.BaseURI, len(definition.API.Endpoints), loggerFlags)
 	logger.Starting()
 
-	workflow.Run(definition, workflow.Flags{})
+	workflowFlags := workflow.Flags{
+		Rate: *rate,
+	}
+	workflow.Run(definition, workflowFlags)
 
 	logger.Finished()
 }

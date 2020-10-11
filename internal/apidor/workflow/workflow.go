@@ -2,6 +2,7 @@ package workflow
 
 import (
 	externalhttp "net/http"
+	"time"
 
 	"github.com/bncrypted/apidor/internal/apidor/logger"
 	"github.com/bncrypted/apidor/pkg/definition"
@@ -10,6 +11,7 @@ import (
 
 // Flags is a workflow struct that holds command line flags for customising the workflow
 type Flags struct {
+	Rate int
 }
 
 type apiSummary struct {
@@ -31,53 +33,66 @@ func Run(definition definition.Definition, flags Flags) {
 		globalMethods: definition.API.GlobalMethods,
 	}
 
+	millisecondsPerRequest := 1000 / flags.Rate
+	minRequestDuration := time.Duration(millisecondsPerRequest) * time.Millisecond
+
 	for endpoint, endpointDetails := range definition.API.Endpoints {
 		requestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
 		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 
-		testNamePrefix := "token"
-		testEndpointWithAllLevelsOfAuthentication(requestOptions, apiSummary.authDetails, testNamePrefix)
+		testEndpointWithAllLevelsOfAuthentication(requestOptions, apiSummary.authDetails, "token", minRequestDuration)
 	}
 }
 
 func testEndpointWithAllLevelsOfAuthentication(requestOptions http.RequestOptions,
-	authDetails definition.AuthDetails, testNamePrefix string) {
+	authDetails definition.AuthDetails, testNamePrefix string, minRequestDuration time.Duration) {
 
 	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-high",
-		authDetails.High, verifyResponseExpectedOK)
+		authDetails.High, verifyResponseExpectedOK, minRequestDuration)
 	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-low",
-		authDetails.Low, verifyResponseExpectedUnauthorised)
+		authDetails.Low, verifyResponseExpectedUnauthorised, minRequestDuration)
 	testEndpointWithoutAuthToken(requestOptions, authDetails, testNamePrefix+"-none",
-		verifyResponseExpectedUnauthorised)
+		verifyResponseExpectedUnauthorised, minRequestDuration)
 }
 
-func testEndpointWithAuthToken(requestOptions http.RequestOptions,
-	authDetails definition.AuthDetails, testName string, token string, verifier verifier) {
+func testEndpointWithAuthToken(requestOptions http.RequestOptions, authDetails definition.AuthDetails,
+	testName string, token string, verifier verifier, minRequestDuration time.Duration) {
 
+	startTime := time.Now()
 	logger.TestPrefix(requestOptions.Endpoint, testName)
+
 	authHeaderValue := buildAuthHeaderValue(authDetails.HeaderValuePrefix, token)
 	requestOptions.Headers = addHeader(requestOptions.Headers, authDetails.HeaderName, authHeaderValue)
 
 	response, err := buildAndSendRequest(requestOptions)
 	if err != nil {
 		logger.Message("Skipping due to error: " + err.Error())
+		return
 	}
 
 	result := verifier(response)
 	logger.TestResult(result)
+
+	durationSinceStartTime := time.Since(startTime)
+	time.Sleep(minRequestDuration - durationSinceStartTime)
 }
 
-func testEndpointWithoutAuthToken(requestOptions http.RequestOptions,
-	authDetails definition.AuthDetails, testName string, verifier verifier) {
+func testEndpointWithoutAuthToken(requestOptions http.RequestOptions, authDetails definition.AuthDetails,
+	testName string, verifier verifier, minRequestDuration time.Duration) {
 
+	startTime := time.Now()
 	logger.TestPrefix(requestOptions.Endpoint, testName)
 	requestOptions.Headers = removeHeader(requestOptions.Headers, authDetails.HeaderName)
 
 	response, err := buildAndSendRequest(requestOptions)
 	if err != nil {
 		logger.Message("Skipping due to error: " + err.Error())
+		return
 	}
 
 	result := verifier(response)
 	logger.TestResult(result)
+
+	durationSinceStartTime := time.Since(startTime)
+	time.Sleep(minRequestDuration - durationSinceStartTime)
 }
