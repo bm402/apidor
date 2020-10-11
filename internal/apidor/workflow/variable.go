@@ -61,3 +61,8 @@ func substituteHighPrivilegedBodyParams(bodyParams map[string]interface{},
 	}
 	return bodyParams
 }
+
+// func substituteAllPrivilegedVariablePermutations(requestOptions http.RequestOptions,
+// 	vars map[string]definition.Variables) []http.RequestOptions {
+
+// }

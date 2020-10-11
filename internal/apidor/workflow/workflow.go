@@ -2,6 +2,7 @@ package workflow
 
 import (
 	externalhttp "net/http"
+	"strconv"
 	"time"
 
 	"github.com/bncrypted/apidor/internal/apidor/logger"
@@ -21,10 +22,18 @@ type apiSummary struct {
 	globalMethods []string
 }
 
-type verifier func(*externalhttp.Response) string
+type verifier func(*externalhttp.Response) (int, string)
+
+var minRequestDuration time.Duration
+
+// Init is a workflow function that initialises the workflow based on the given flags
+func Init(flags Flags) {
+	millisecondsPerRequest := 1000 / flags.Rate
+	minRequestDuration = time.Duration(millisecondsPerRequest) * time.Millisecond
+}
 
 // Run is a workflow function that orchestrates the API testing
-func Run(definition definition.Definition, flags Flags) {
+func Run(definition definition.Definition) {
 
 	apiSummary := apiSummary{
 		baseURI:       definition.BaseURI,
@@ -33,65 +42,58 @@ func Run(definition definition.Definition, flags Flags) {
 		globalMethods: definition.API.GlobalMethods,
 	}
 
-	millisecondsPerRequest := 1000 / flags.Rate
-	minRequestDuration := time.Duration(millisecondsPerRequest) * time.Millisecond
-
 	for endpoint, endpointDetails := range definition.API.Endpoints {
 		requestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
 		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 
-		testEndpointWithAllLevelsOfAuthentication(requestOptions, apiSummary.authDetails, "token", minRequestDuration)
+		testEndpointWithAllLevelsOfAuthentication(requestOptions, apiSummary.authDetails, "token")
 	}
 }
 
 func testEndpointWithAllLevelsOfAuthentication(requestOptions http.RequestOptions,
-	authDetails definition.AuthDetails, testNamePrefix string, minRequestDuration time.Duration) {
+	authDetails definition.AuthDetails, testNamePrefix string) {
 
 	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-high",
-		authDetails.High, verifyResponseExpectedOK, minRequestDuration)
+		authDetails.High, verifyResponseExpectedOK)
 	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-low",
-		authDetails.Low, verifyResponseExpectedUnauthorised, minRequestDuration)
+		authDetails.Low, verifyResponseExpectedUnauthorised)
 	testEndpointWithoutAuthToken(requestOptions, authDetails, testNamePrefix+"-none",
-		verifyResponseExpectedUnauthorised, minRequestDuration)
+		verifyResponseExpectedUnauthorised)
 }
 
-func testEndpointWithAuthToken(requestOptions http.RequestOptions, authDetails definition.AuthDetails,
-	testName string, token string, verifier verifier, minRequestDuration time.Duration) {
+func testEndpointWithAuthToken(requestOptions http.RequestOptions,
+	authDetails definition.AuthDetails, testName string, token string, verifier verifier) {
 
-	startTime := time.Now()
 	logger.TestPrefix(requestOptions.Endpoint, testName)
-
 	authHeaderValue := buildAuthHeaderValue(authDetails.HeaderValuePrefix, token)
 	requestOptions.Headers = addHeader(requestOptions.Headers, authDetails.HeaderName, authHeaderValue)
 
-	response, err := buildAndSendRequest(requestOptions)
-	if err != nil {
-		logger.Message("Skipping due to error: " + err.Error())
-		return
-	}
-
-	result := verifier(response)
-	logger.TestResult(result)
-
-	durationSinceStartTime := time.Since(startTime)
-	time.Sleep(minRequestDuration - durationSinceStartTime)
+	testEndpoint(requestOptions, verifier)
 }
 
-func testEndpointWithoutAuthToken(requestOptions http.RequestOptions, authDetails definition.AuthDetails,
-	testName string, verifier verifier, minRequestDuration time.Duration) {
+func testEndpointWithoutAuthToken(requestOptions http.RequestOptions,
+	authDetails definition.AuthDetails, testName string, verifier verifier) {
 
-	startTime := time.Now()
 	logger.TestPrefix(requestOptions.Endpoint, testName)
 	requestOptions.Headers = removeHeader(requestOptions.Headers, authDetails.HeaderName)
 
+	testEndpoint(requestOptions, verifier)
+}
+
+func testEndpoint(requestOptions http.RequestOptions, verifier verifier) {
+	startTime := time.Now()
 	response, err := buildAndSendRequest(requestOptions)
 	if err != nil {
 		logger.Message("Skipping due to error: " + err.Error())
 		return
 	}
 
-	result := verifier(response)
-	logger.TestResult(result)
+	status, result := verifier(response)
+	logger.TestResult(strconv.Itoa(status) + " " + result)
+
+	if result != "OK" {
+		logger.DumpRequest(requestOptions)
+	}
 
 	durationSinceStartTime := time.Since(startTime)
 	time.Sleep(minRequestDuration - durationSinceStartTime)

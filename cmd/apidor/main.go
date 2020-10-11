@@ -51,7 +51,8 @@ func main() {
 	workflowFlags := workflow.Flags{
 		Rate: *rate,
 	}
-	workflow.Run(definition, workflowFlags)
+	workflow.Init(workflowFlags)
+	workflow.Run(definition)
 
 	logger.Finished()
 }
