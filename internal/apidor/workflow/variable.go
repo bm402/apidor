@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"sort"
+	"strconv"
 
 	"github.com/bncrypted/apidor/internal/apidor/permutation"
 	"github.com/bncrypted/apidor/pkg/definition"
@@ -204,4 +205,34 @@ func getVarsFromDefinition(vr string, vrs map[string]definition.Variables) (defi
 		}
 	}
 	return definition.Variables{}, false
+}
+
+func getHighPrivilegedVariableValues(requestOptions http.RequestOptions,
+	vars map[string]definition.Variables) []string {
+
+	toString := func(value interface{}) (string, bool) {
+		switch value.(type) {
+		case string:
+			return value.(string), true
+		case int:
+			return strconv.Itoa(value.(int)), true
+		}
+		return "", false
+	}
+
+	varsInRequest := []string{}
+	varsInRequest = append(varsInRequest, variable.FindVarsInString(requestOptions.Endpoint)...)
+	varsInRequest = append(varsInRequest, variable.FindVarsInMapOfStrings(requestOptions.RequestParams)...)
+	varsInRequest = append(varsInRequest, variable.FindVarsInMap(requestOptions.BodyParams)...)
+
+	highPrivilegedVarValues := []string{}
+	for _, varInRequest := range varsInRequest {
+		if varValues, ok := getVarsFromDefinition(varInRequest, vars); ok {
+			if varValue, ok := toString(varValues.High); ok {
+				highPrivilegedVarValues = append(highPrivilegedVarValues, varValue)
+			}
+		}
+	}
+
+	return highPrivilegedVarValues
 }
