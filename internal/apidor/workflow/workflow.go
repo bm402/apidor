@@ -43,41 +43,34 @@ func Run(definition definition.Definition) {
 	}
 
 	for endpoint, endpointDetails := range definition.API.Endpoints {
-		requestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
+		baseRequestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
+
+		// high privileged request
+		requestOptions := baseRequestOptions.DeepCopy()
+		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.High)
 		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
+		logger.TestPrefix(endpoint, "high-priv")
+		testEndpoint(requestOptions, verifyResponseExpectedOK)
 
-		testEndpointWithAllLevelsOfAuthentication(requestOptions, apiSummary.authDetails, "token")
+		// low privileged requests
+		requestOptions = baseRequestOptions.DeepCopy()
+		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+		collectedRequestOptions := substituteAllPrivilegedVariablePermutations(requestOptions, definition.Vars)
+		for _, requestOptions := range collectedRequestOptions {
+			logger.TestPrefix(endpoint, "low-priv-permutations")
+			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised)
+		}
+
+		// no privilege request
+		requestOptions = baseRequestOptions.DeepCopy()
+		requestOptions = removeAuthHeaderFromRequestOptions(requestOptions, definition.AuthDetails.HeaderName)
+		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
+		logger.TestPrefix(endpoint, "no-priv")
+		testEndpoint(requestOptions, verifyResponseExpectedUnauthorised)
 	}
-}
 
-func testEndpointWithAllLevelsOfAuthentication(requestOptions http.RequestOptions,
-	authDetails definition.AuthDetails, testNamePrefix string) {
-
-	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-high",
-		authDetails.High, verifyResponseExpectedOK)
-	testEndpointWithAuthToken(requestOptions, authDetails, testNamePrefix+"-low",
-		authDetails.Low, verifyResponseExpectedUnauthorised)
-	testEndpointWithoutAuthToken(requestOptions, authDetails, testNamePrefix+"-none",
-		verifyResponseExpectedUnauthorised)
-}
-
-func testEndpointWithAuthToken(requestOptions http.RequestOptions,
-	authDetails definition.AuthDetails, testName string, token string, verifier verifier) {
-
-	logger.TestPrefix(requestOptions.Endpoint, testName)
-	authHeaderValue := buildAuthHeaderValue(authDetails.HeaderValuePrefix, token)
-	requestOptions.Headers = addHeader(requestOptions.Headers, authDetails.HeaderName, authHeaderValue)
-
-	testEndpoint(requestOptions, verifier)
-}
-
-func testEndpointWithoutAuthToken(requestOptions http.RequestOptions,
-	authDetails definition.AuthDetails, testName string, verifier verifier) {
-
-	logger.TestPrefix(requestOptions.Endpoint, testName)
-	requestOptions.Headers = removeHeader(requestOptions.Headers, authDetails.HeaderName)
-
-	testEndpoint(requestOptions, verifier)
 }
 
 func testEndpoint(requestOptions http.RequestOptions, verifier verifier) {

@@ -63,6 +63,19 @@ func mergeGlobalAndLocalHeaders(globalHeaders map[string]string, localHeaders ma
 	return headers
 }
 
+func addAuthHeaderToRequestOptions(requestOptions http.RequestOptions, headerName string,
+	headerValuePrefix string, token string) http.RequestOptions {
+
+	headerValue := buildAuthHeaderValue(headerValuePrefix, token)
+	requestOptions.Headers = addHeader(requestOptions.Headers, headerName, headerValue)
+	return requestOptions
+}
+
+func removeAuthHeaderFromRequestOptions(requestOptions http.RequestOptions, headerName string) http.RequestOptions {
+	requestOptions.Headers = removeHeader(requestOptions.Headers, headerName)
+	return requestOptions
+}
+
 func addHeader(headers map[string]string, headerName string, headerValue string) map[string]string {
 	headers[headerName] = headerValue
 	return headers
