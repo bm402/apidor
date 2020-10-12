@@ -131,7 +131,6 @@ func TestPrefix(endpoint string, testName string) {
 // TestResult is a logger function that prints the result of the test
 func TestResult(result string) {
 	if isDebug {
-		writeln("")
 		writeln(result)
 		writeln("")
 	} else {

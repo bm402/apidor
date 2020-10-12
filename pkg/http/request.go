@@ -20,8 +20,6 @@ type RequestOptions struct {
 	Headers       map[string]string
 	RequestParams map[string]string
 	BodyParams    map[string]interface{}
-	IsProxy       bool
-	ProxyURI      string
 }
 
 var isProxy bool
