@@ -12,7 +12,7 @@ api:
     methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
     headers:
     endpoints:
-        users.info/$userId/$userId.test:
+        users.info/$userId:1/$userId:2.test:
             operation: READ
             method: GET
             content_type: JSON

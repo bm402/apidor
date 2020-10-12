@@ -2,9 +2,12 @@ package logger
 
 import (
 	"fmt"
+	"net/http/httputil"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/bncrypted/apidor/pkg/http"
 )
 
 // Flags is a logger struct that holds command line flags for customising the logging output
@@ -127,7 +130,10 @@ func TestPrefix(endpoint string, testName string) {
 
 // TestResult is a logger function that prints the result of the test
 func TestResult(result string) {
-	if !isDebug {
+	if isDebug {
+		writeln(result)
+		writeln("")
+	} else {
 		writeln(result)
 	}
 }
@@ -164,6 +170,27 @@ func Fatal(message string) {
 	writeln("Fatal: " + message)
 	writeln("Exiting")
 	writeln("")
+}
+
+// DumpRequest is a logger function that prints a request dump
+func DumpRequest(requestOptions http.RequestOptions) {
+	if !isDebug {
+		writeln("")
+		defer writeln("")
+
+		request, err := http.CreateRequest(requestOptions)
+		if err != nil {
+			writeln("Error dumping request: " + err.Error())
+			return
+		}
+		requestDump, err := httputil.DumpRequest(request, true)
+		if err != nil {
+			writeln("Error dumping request: " + err.Error())
+			return
+		}
+
+		writeln(string(requestDump))
+	}
 }
 
 func write(message string) {

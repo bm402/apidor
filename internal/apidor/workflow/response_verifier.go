@@ -2,27 +2,32 @@ package workflow
 
 import (
 	"net/http"
-	"strconv"
 )
 
-func verifyResponseExpectedOK(response *http.Response) string {
+func verifyResponseExpectedOK(response *http.Response) (int, string) {
 	defer response.Body.Close()
-	result := strconv.Itoa(response.StatusCode) + " "
+	status := response.StatusCode
+	var result string
+
 	if response.StatusCode/100 != 2 {
-		result += "Unexpected status code, expecting 2xx"
+		result = "Unexpected status code, expecting 2xx"
 	} else {
-		result += "OK"
+		result = "OK"
 	}
-	return result
+
+	return status, result
 }
 
-func verifyResponseExpectedUnauthorised(response *http.Response) string {
+func verifyResponseExpectedUnauthorised(response *http.Response) (int, string) {
 	defer response.Body.Close()
-	result := strconv.Itoa(response.StatusCode) + " "
+	status := response.StatusCode
+	var result string
+
 	if response.StatusCode/100 != 4 {
-		result += "Unexpected status code, expecting 4xx"
+		result = "Unexpected status code, expecting 4xx"
 	} else {
-		result += "OK"
+		result = "OK"
 	}
-	return result
+
+	return status, result
 }
