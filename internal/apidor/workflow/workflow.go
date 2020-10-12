@@ -22,7 +22,7 @@ type apiSummary struct {
 	globalMethods []string
 }
 
-type verifier func(*externalhttp.Response) (int, string)
+type verifier func(*externalhttp.Response, []string) (int, string)
 
 var minRequestDuration time.Duration
 
@@ -44,6 +44,7 @@ func Run(definition definition.Definition) {
 
 	for endpoint, endpointDetails := range definition.API.Endpoints {
 		baseRequestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
+		bannedResponseWords := getHighPrivilegedVariableValues(baseRequestOptions, definition.Vars)
 
 		// high privileged request
 		requestOptions := baseRequestOptions.DeepCopy()
@@ -51,7 +52,7 @@ func Run(definition definition.Definition) {
 			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.High)
 		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 		logger.TestPrefix(endpoint, "high-priv")
-		testEndpoint(requestOptions, verifyResponseExpectedOK)
+		testEndpoint(requestOptions, verifyResponseExpectedOK, []string{})
 
 		// low privileged requests
 		requestOptions = baseRequestOptions.DeepCopy()
@@ -60,7 +61,7 @@ func Run(definition definition.Definition) {
 		collectedRequestOptions := substituteAllPrivilegedVariablePermutations(requestOptions, definition.Vars)
 		for _, requestOptions := range collectedRequestOptions {
 			logger.TestPrefix(endpoint, "low-priv-permutations")
-			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised)
+			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
 		}
 
 		// no privilege request
@@ -68,12 +69,12 @@ func Run(definition definition.Definition) {
 		requestOptions = removeAuthHeaderFromRequestOptions(requestOptions, definition.AuthDetails.HeaderName)
 		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 		logger.TestPrefix(endpoint, "no-priv")
-		testEndpoint(requestOptions, verifyResponseExpectedUnauthorised)
+		testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
 	}
 
 }
 
-func testEndpoint(requestOptions http.RequestOptions, verifier verifier) {
+func testEndpoint(requestOptions http.RequestOptions, verifier verifier, bannedResponseWords []string) {
 	startTime := time.Now()
 	response, err := buildAndSendRequest(requestOptions)
 	if err != nil {
@@ -81,10 +82,10 @@ func testEndpoint(requestOptions http.RequestOptions, verifier verifier) {
 		return
 	}
 
-	status, result := verifier(response)
+	status, result := verifier(response, bannedResponseWords)
 	logger.TestResult(strconv.Itoa(status) + " " + result)
 
-	if result != "OK" {
+	if result[:2] != "OK" {
 		logger.DumpRequest(requestOptions)
 	}
 
