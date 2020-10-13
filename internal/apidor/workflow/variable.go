@@ -5,6 +5,7 @@ import (
 	"strconv"
 
 	"github.com/bncrypted/apidor/internal/apidor/permutation"
+	"github.com/bncrypted/apidor/pkg/copy"
 	"github.com/bncrypted/apidor/pkg/definition"
 	"github.com/bncrypted/apidor/pkg/http"
 	"github.com/bncrypted/apidor/pkg/variable"
@@ -178,6 +179,94 @@ func substituteMixedPrivilegeBodyParams(bodyParams map[string]interface{},
 		bodyParams = variable.SubstituteVarsInMap(bodyParams, varsToSubstitute)
 	}
 	return bodyParams
+}
+
+func substituteOppositePrivilegedRequestParamPermutations(baseRequestOptions http.RequestOptions,
+	vars map[string]definition.Variables) []http.RequestOptions {
+
+	// substitute path params
+	substitutedEndpoints := []string{}
+	varsInPath := variable.FindVarsInString(baseRequestOptions.Endpoint)
+	permutations := permutation.GetAllCombinationsOfHighAndLowPrivilege(len(varsInPath))
+	for _, permutation := range permutations {
+		endpoint := substituteMixedPrivilegePathParams(baseRequestOptions.Endpoint,
+			varsInPath, vars, permutation)
+		substitutedEndpoints = append(substitutedEndpoints, endpoint)
+	}
+
+	// substitute request params
+	substitutedRequestParams := []map[string]string{}
+	varsInRequestParams := variable.FindVarsInMapOfStrings(baseRequestOptions.RequestParams)
+	duplicatedVarsInRequestParams := duplicateVars(varsInRequestParams)
+	permutations = permutation.GetCombinationsOfOppositePrivilege(len(duplicatedVarsInRequestParams))
+	duplicatedRequestParams := duplicateRequestParamsWithVars(baseRequestOptions.RequestParams,
+		varsInRequestParams)
+
+	for _, permutation := range permutations {
+		requestParams := substituteMixedPrivilegeRequestParams(duplicatedRequestParams,
+			duplicatedVarsInRequestParams, vars, permutation)
+		substitutedRequestParams = append(substitutedRequestParams, requestParams)
+	}
+
+	// substitute body params
+	substitutedBodyParams := []map[string]interface{}{}
+	varsInBodyParams := variable.FindVarsInMap(baseRequestOptions.BodyParams)
+	permutations = permutation.GetAllCombinationsOfHighAndLowPrivilege(len(varsInBodyParams))
+	for _, permutation := range permutations {
+		bodyParams := substituteMixedPrivilegeBodyParams(baseRequestOptions.BodyParams,
+			varsInBodyParams, vars, permutation)
+		substitutedBodyParams = append(substitutedBodyParams, bodyParams)
+	}
+
+	// create request options for all combinations
+	substitutedRequestOptions := []http.RequestOptions{}
+	for _, endpoint := range substitutedEndpoints {
+		for _, requestParams := range substitutedRequestParams {
+			for _, bodyParams := range substitutedBodyParams {
+				requestOptions := baseRequestOptions.DeepCopy()
+				requestOptions.Endpoint = endpoint
+				requestOptions.RequestParams = requestParams
+				requestOptions.BodyParams = bodyParams
+				substitutedRequestOptions = append(substitutedRequestOptions, requestOptions)
+			}
+		}
+	}
+
+	return substitutedRequestOptions
+}
+
+func duplicateVars(vars []string) []string {
+	duplicatedVars := []string{}
+	for _, vr := range vars {
+		duplicatedVars = append(duplicatedVars, vr+":1")
+		duplicatedVars = append(duplicatedVars, vr+":2")
+	}
+	return duplicatedVars
+}
+
+func duplicateRequestParamsWithVars(requestParams map[string]string,
+	varsInRequestParams []string) map[string]string {
+
+	requestParamsWithDuplicates := copy.MapOfStrings(requestParams)
+	if len(varsInRequestParams) > 0 {
+		for key, value := range requestParams {
+			if containsVar(value, varsInRequestParams) {
+				requestParamsWithDuplicates[key+":1"] = value + ":1"
+				requestParamsWithDuplicates[key+":2"] = value + ":2"
+				delete(requestParamsWithDuplicates, key)
+			}
+		}
+	}
+	return requestParamsWithDuplicates
+}
+
+func containsVar(value string, vars []string) bool {
+	for _, vr := range vars {
+		if vr == value {
+			return true
+		}
+	}
+	return false
 }
 
 func getVarsFromDefinition(vr string, vrs map[string]definition.Variables) (definition.Variables, bool) {

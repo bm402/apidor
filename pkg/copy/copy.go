@@ -1,17 +1,4 @@
-package http
-
-// DeepCopy is a http method that makes a copy of a RequestOptions struct
-func (ro RequestOptions) DeepCopy() RequestOptions {
-	return RequestOptions{
-		Method:        ro.Method,
-		BaseURI:       ro.BaseURI,
-		Endpoint:      ro.Endpoint,
-		ContentType:   ro.ContentType,
-		Headers:       MapOfStrings(ro.Headers),
-		RequestParams: MapOfStrings(ro.RequestParams),
-		BodyParams:    Map(ro.BodyParams),
-	}
-}
+package copy
 
 // Map is a http function that makes a copy of the map[string]interface{} type
 func Map(mp map[string]interface{}) map[string]interface{} {

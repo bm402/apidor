@@ -3,6 +3,8 @@ package http
 import (
 	"bytes"
 	"net/http"
+
+	"github.com/bncrypted/apidor/pkg/copy"
 )
 
 // Flags is a http struct that holds command line flags for customising the HTTP requests
@@ -82,4 +84,17 @@ func SendRequest(req *http.Request) (*http.Response, error) {
 	}
 
 	return resp, nil
+}
+
+// DeepCopy is a http method that makes a copy of a RequestOptions struct
+func (ro RequestOptions) DeepCopy() RequestOptions {
+	return RequestOptions{
+		Method:        ro.Method,
+		BaseURI:       ro.BaseURI,
+		Endpoint:      ro.Endpoint,
+		ContentType:   ro.ContentType,
+		Headers:       copy.MapOfStrings(ro.Headers),
+		RequestParams: copy.MapOfStrings(ro.RequestParams),
+		BodyParams:    copy.Map(ro.BodyParams),
+	}
 }

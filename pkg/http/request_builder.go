@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sort"
 	"time"
 )
 
@@ -25,13 +26,20 @@ func buildURI(baseURI string, endpoint string, requestParams map[string]string) 
 	}
 
 	if len(requestParams) > 0 {
+		orderedKeys := []string{}
+		for key := range requestParams {
+			orderedKeys = append(orderedKeys, key)
+		}
+		sort.Strings(orderedKeys)
+
 		uri += "?"
-		for key, param := range requestParams {
+		for _, key := range orderedKeys {
+			keyWithoutIndex := key
 			// checks for parameter pollution notation (eg. key:2)
 			if key[len(key)-2] == ':' && (key[len(key)-1]-'0' >= 0 && key[len(key)-1]-'0' <= 9) {
-				key = key[:len(key)-2]
+				keyWithoutIndex = key[:len(key)-2]
 			}
-			uri += key + "=" + param + "&"
+			uri += keyWithoutIndex + "=" + requestParams[key] + "&"
 		}
 		uri = uri[:len(uri)-1]
 	}
