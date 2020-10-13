@@ -1,46 +1,86 @@
 package permutation
 
-var cache map[int][]string
+import (
+	"strconv"
+)
+
+var cache map[string][]string
 
 // GetAllCombinationsOfHighAndLowPrivilege is a permutations function that returns all the permutations
 // of high and low privilege for n variables
 func GetAllCombinationsOfHighAndLowPrivilege(n int) []string {
-	if cachedPermutation, ok := getPermutationsFromCache(n); ok {
+	cacheKey := "full-" + strconv.Itoa(n)
+	if cachedPermutation, ok := getPermutationsFromCache(cacheKey); ok {
 		return cachedPermutation
 	}
 
 	permutations := []string{}
 	curPermutation := ""
-	permutationsBuilder(&permutations, &curPermutation, n, 0)
-	setPermutationsInCache(n, permutations)
+	fullPermutationsBuilder(&permutations, &curPermutation, n, 0)
+	setPermutationsInCache(cacheKey, permutations)
 
 	return permutations
 }
 
-func permutationsBuilder(permutations *[]string, curPermutation *string, maxLevel int, curLevel int) {
+func fullPermutationsBuilder(permutations *[]string, curPermutation *string, maxLevel int, curLevel int) {
 	if curLevel == maxLevel {
 		*permutations = append(*permutations, *curPermutation)
 		return
 	}
 
 	*curPermutation += "h"
-	permutationsBuilder(permutations, curPermutation, maxLevel, curLevel+1)
+	fullPermutationsBuilder(permutations, curPermutation, maxLevel, curLevel+1)
 	*curPermutation = (*curPermutation)[:len(*curPermutation)-1]
 
 	*curPermutation += "l"
-	permutationsBuilder(permutations, curPermutation, maxLevel, curLevel+1)
+	fullPermutationsBuilder(permutations, curPermutation, maxLevel, curLevel+1)
 	*curPermutation = (*curPermutation)[:len(*curPermutation)-1]
 }
 
-func getPermutationsFromCache(n int) ([]string, bool) {
+// GetCombinationsOfOppositePrivilege is a permutations function that returns permutations
+// of opposite privilege for n variables
+func GetCombinationsOfOppositePrivilege(n int) []string {
+	cacheKey := "opposite-" + strconv.Itoa(n)
+	if cachedPermutation, ok := getPermutationsFromCache(cacheKey); ok {
+		return cachedPermutation
+	}
+
+	permutations := []string{}
+	curPermutation := ""
+	oppositePermutationsBuilder(&permutations, &curPermutation, n, 0)
+	setPermutationsInCache(cacheKey, permutations)
+
+	return permutations
+}
+
+func oppositePermutationsBuilder(permutations *[]string, curPermutation *string, maxLevel int, curLevel int) {
+	if curLevel == maxLevel {
+		*permutations = append(*permutations, *curPermutation)
+		return
+	}
+
+	if curLevel%2 == 0 || (*curPermutation)[curLevel-1] == 'l' {
+		*curPermutation += "h"
+		oppositePermutationsBuilder(permutations, curPermutation, maxLevel, curLevel+1)
+		*curPermutation = (*curPermutation)[:len(*curPermutation)-1]
+	}
+
+	if curLevel%2 == 0 || (*curPermutation)[curLevel-1] == 'h' {
+		*curPermutation += "l"
+		oppositePermutationsBuilder(permutations, curPermutation, maxLevel, curLevel+1)
+		*curPermutation = (*curPermutation)[:len(*curPermutation)-1]
+	}
+}
+
+func getPermutationsFromCache(key string) ([]string, bool) {
 	if cache == nil {
-		cache = make(map[int][]string)
+		cache = make(map[string][]string)
 		return []string{}, false
 	}
-	permutation, status := cache[n]
+	permutation, status := cache[key]
 	return permutation, status
 }
 
-func setPermutationsInCache(n int, permutations []string) {
-	cache[n] = permutations
+func setPermutationsInCache(key string, permutations []string) {
+	cache[key] = permutations
 }

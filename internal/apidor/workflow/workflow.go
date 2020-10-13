@@ -58,9 +58,29 @@ func Run(definition definition.Definition) {
 		requestOptions = baseRequestOptions.DeepCopy()
 		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-		collectedRequestOptions := substituteAllPrivilegedVariablePermutations(requestOptions, definition.Vars)
+		collectedRequestOptions := substituteMixedPrivilegedVariablePermutations(requestOptions, definition.Vars)
 		for _, requestOptions := range collectedRequestOptions {
-			logger.TestPrefix(endpoint, "low-priv-permutations")
+			logger.TestPrefix(endpoint, "low-priv-perms")
+			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
+		}
+
+		// parameter pollution in request params
+		requestOptions = baseRequestOptions.DeepCopy()
+		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+		collectedRequestOptions = substituteAndParameterPolluteRequestParams(requestOptions, definition.Vars)
+		for _, requestOptions := range collectedRequestOptions {
+			logger.TestPrefix(endpoint, "low-priv-request-pp")
+			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
+		}
+
+		// parameter pollution in body params
+		requestOptions = baseRequestOptions.DeepCopy()
+		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+		collectedRequestOptions = substituteAndParameterPolluteBodyParams(requestOptions, definition.Vars)
+		for _, requestOptions := range collectedRequestOptions {
+			logger.TestPrefix(endpoint, "low-priv-body-pp")
 			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
 		}
 
