@@ -45,20 +45,27 @@ func Run(definition definition.Definition) {
 	for endpoint, endpointDetails := range definition.API.Endpoints {
 		baseRequestOptions := buildEndpointRequestOptions(apiSummary, endpoint, endpointDetails)
 		bannedResponseWords := getHighPrivilegedVariableValues(baseRequestOptions, definition.Vars)
+		var requestOptions http.RequestOptions
+		var collectedRequestOptions []http.RequestOptions
 
 		// high privileged request
-		requestOptions := baseRequestOptions.DeepCopy()
-		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
-			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.High)
-		requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
-		logger.TestPrefix(endpoint, "high-priv")
-		testEndpoint(requestOptions, verifyResponseExpectedOK, []string{})
+		if endpointDetails.Operation == "DELETE" {
+			logger.TestPrefix(endpoint, "high-priv")
+			logger.TestResult("Skipping delete operation")
+		} else {
+			requestOptions = baseRequestOptions.DeepCopy()
+			requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+				definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.High)
+			requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
+			logger.TestPrefix(endpoint, "high-priv")
+			testEndpoint(requestOptions, verifyResponseExpectedOK, []string{})
+		}
 
 		// low privileged requests
 		requestOptions = baseRequestOptions.DeepCopy()
 		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-		collectedRequestOptions := substituteMixedPrivilegedVariablePermutations(requestOptions, definition.Vars)
+		collectedRequestOptions = substituteMixedPrivilegedVariablePermutations(requestOptions, definition.Vars)
 		for _, requestOptions := range collectedRequestOptions {
 			logger.TestPrefix(endpoint, "low-priv-perms")
 			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
@@ -91,7 +98,6 @@ func Run(definition definition.Definition) {
 		logger.TestPrefix(endpoint, "no-priv")
 		testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
 	}
-
 }
 
 func testEndpoint(requestOptions http.RequestOptions, verifier verifier, bannedResponseWords []string) {
