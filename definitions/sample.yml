@@ -21,6 +21,6 @@ api:
             content_type: JSON
             headers:
             request_params:
-                id: $userId
-                doc: $docId
             body_params:
+              id: $userId
+              doc: $docId

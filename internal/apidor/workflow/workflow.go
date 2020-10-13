@@ -64,13 +64,23 @@ func Run(definition definition.Definition) {
 		// 	testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
 		// }
 
-		// parameter pollution in request params
+		// // parameter pollution in request params
+		// requestOptions := baseRequestOptions.DeepCopy()
+		// requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+		// 	definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+		// collectedRequestOptions := substituteOppositePrivilegedRequestParamPermutations(requestOptions, definition.Vars)
+		// for _, requestOptions := range collectedRequestOptions {
+		// 	logger.TestPrefix(endpoint, "low-priv-request-pp")
+		// 	testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
+		// }
+
+		// parameter pollution in body params
 		requestOptions := baseRequestOptions.DeepCopy()
 		requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 			definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-		collectedRequestOptions := substituteOppositePrivilegedRequestParamPermutations(requestOptions, definition.Vars)
+		collectedRequestOptions := substituteOppositePrivilegedBodyParamPermutations(requestOptions, definition.Vars)
 		for _, requestOptions := range collectedRequestOptions {
-			logger.TestPrefix(endpoint, "low-priv-parameter-pollution")
+			logger.TestPrefix(endpoint, "low-priv-body-pp")
 			testEndpoint(requestOptions, verifyResponseExpectedUnauthorised, bannedResponseWords)
 		}
 

@@ -235,6 +235,60 @@ func substituteOppositePrivilegedRequestParamPermutations(baseRequestOptions htt
 	return substitutedRequestOptions
 }
 
+func substituteOppositePrivilegedBodyParamPermutations(baseRequestOptions http.RequestOptions,
+	vars map[string]definition.Variables) []http.RequestOptions {
+
+	// substitute path params
+	substitutedEndpoints := []string{}
+	varsInPath := variable.FindVarsInString(baseRequestOptions.Endpoint)
+	permutations := permutation.GetAllCombinationsOfHighAndLowPrivilege(len(varsInPath))
+	for _, permutation := range permutations {
+		endpoint := substituteMixedPrivilegePathParams(baseRequestOptions.Endpoint,
+			varsInPath, vars, permutation)
+		substitutedEndpoints = append(substitutedEndpoints, endpoint)
+	}
+
+	// substitute request params
+	substitutedRequestParams := []map[string]string{}
+	varsInRequestParams := variable.FindVarsInMapOfStrings(baseRequestOptions.RequestParams)
+	permutations = permutation.GetAllCombinationsOfHighAndLowPrivilege(len(varsInRequestParams))
+	for _, permutation := range permutations {
+		requestParams := substituteMixedPrivilegeRequestParams(baseRequestOptions.RequestParams,
+			varsInRequestParams, vars, permutation)
+		substitutedRequestParams = append(substitutedRequestParams, requestParams)
+	}
+
+	// substitute body params
+	substitutedBodyParams := []map[string]interface{}{}
+	varsInBodyParams := variable.FindVarsInMap(baseRequestOptions.BodyParams)
+	duplicatedVarsInBodyParams := duplicateVars(varsInBodyParams)
+	permutations = permutation.GetCombinationsOfOppositePrivilege(len(duplicatedVarsInBodyParams))
+	duplicatedBodyParams := duplicateBodyParamsWithVars(baseRequestOptions.BodyParams,
+		varsInBodyParams)
+
+	for _, permutation := range permutations {
+		bodyParams := substituteMixedPrivilegeBodyParams(duplicatedBodyParams,
+			duplicatedVarsInBodyParams, vars, permutation)
+		substitutedBodyParams = append(substitutedBodyParams, bodyParams)
+	}
+
+	// create request options for all combinations
+	substitutedRequestOptions := []http.RequestOptions{}
+	for _, endpoint := range substitutedEndpoints {
+		for _, requestParams := range substitutedRequestParams {
+			for _, bodyParams := range substitutedBodyParams {
+				requestOptions := baseRequestOptions.DeepCopy()
+				requestOptions.Endpoint = endpoint
+				requestOptions.RequestParams = requestParams
+				requestOptions.BodyParams = bodyParams
+				substitutedRequestOptions = append(substitutedRequestOptions, requestOptions)
+			}
+		}
+	}
+
+	return substitutedRequestOptions
+}
+
 func duplicateVars(vars []string) []string {
 	duplicatedVars := []string{}
 	for _, vr := range vars {
@@ -258,6 +312,75 @@ func duplicateRequestParamsWithVars(requestParams map[string]string,
 		}
 	}
 	return requestParamsWithDuplicates
+}
+
+func duplicateBodyParamsWithVars(bodyParams map[string]interface{},
+	varsInBodyParams []string) map[string]interface{} {
+
+	return duplicateMapVars(bodyParams, varsInBodyParams)
+}
+
+func duplicateMapVars(mp map[string]interface{}, vars []string) map[string]interface{} {
+	mapWithDuplicates := copy.Map(mp)
+	if len(vars) > 0 {
+		for key, value := range mp {
+			switch value.(type) {
+			case string:
+				if containsVar(value.(string), vars) {
+					mapWithDuplicates[key+":1"] = value.(string) + ":1"
+					mapWithDuplicates[key+":2"] = value.(string) + ":2"
+					delete(mapWithDuplicates, key)
+				}
+			case []interface{}:
+				if arr, isVarDirectChild := duplicateArrayVars(value.([]interface{}),
+					vars); isVarDirectChild {
+					mapWithDuplicates[key+":1"] = addIndexesToVarsInArrayOfStrings(arr, vars, "1")
+					mapWithDuplicates[key+":2"] = addIndexesToVarsInArrayOfStrings(arr, vars, "2")
+					delete(mapWithDuplicates, key)
+				} else {
+					mapWithDuplicates[key] = arr
+				}
+			case map[string]interface{}:
+				mapWithDuplicates[key] = duplicateMapVars(value.(map[string]interface{}), vars)
+			}
+		}
+	}
+	return mapWithDuplicates
+}
+
+func duplicateArrayVars(arr []interface{}, vars []string) ([]interface{}, bool) {
+	arrWithDuplicates := copy.Array(arr)
+	isVarDirectChild := false
+	if len(vars) > 0 {
+		for idx, value := range arr {
+			switch value.(type) {
+			case string:
+				if containsVar(value.(string), vars) {
+					isVarDirectChild = true
+				}
+			case []interface{}:
+				arrWithDuplicates[idx], _ = duplicateArrayVars(value.([]interface{}), vars)
+			case map[string]interface{}:
+				arrWithDuplicates[idx] = duplicateMapVars(value.(map[string]interface{}), vars)
+			}
+		}
+	}
+	return arrWithDuplicates, isVarDirectChild
+}
+
+func addIndexesToVarsInArrayOfStrings(arr []interface{}, vars []string, index string) []interface{} {
+	arrWithIndexes := []interface{}{}
+	for _, value := range arr {
+		switch value.(type) {
+		case string:
+			if containsVar(value.(string), vars) {
+				arrWithIndexes = append(arrWithIndexes, value.(string)+":"+index)
+			} else {
+				arrWithIndexes = append(arrWithIndexes, value.(string))
+			}
+		}
+	}
+	return arrWithIndexes
 }
 
 func containsVar(value string, vars []string) bool {

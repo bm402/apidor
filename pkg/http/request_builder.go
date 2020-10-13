@@ -1,6 +1,7 @@
 package http
 
 import (
+	"bytes"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/json"
@@ -50,16 +51,41 @@ func buildURI(baseURI string, endpoint string, requestParams map[string]string) 
 func buildBody(encodedContentType string, bodyParams map[string]interface{}) ([]byte, error) {
 	var body []byte
 	var err error
+
 	switch encodedContentType {
 	case "JSON":
 		body, err = json.Marshal(bodyParams)
 		if err != nil {
 			return nil, err
 		}
+
+		indexedVarKeys := findIndexedVarKeysInBodyParams(bodyParams)
+		for _, varKey := range indexedVarKeys {
+			bytesToFind := []byte(varKey)
+			bytesToReplace := bytesToFind[:len(bytesToFind)-2]
+			body = bytes.Replace(body, bytesToFind, bytesToReplace, 1)
+		}
+
 	default:
 		return nil, errors.New("Unknown content type \"" + encodedContentType + "\"")
 	}
 	return body, nil
+}
+
+func findIndexedVarKeysInBodyParams(bodyParams map[string]interface{}) []string {
+	varKeys := []string{}
+	for key, value := range bodyParams {
+		switch value.(type) {
+		case map[string]interface{}:
+			varKeys = append(varKeys, findIndexedVarKeysInBodyParams(value.(map[string]interface{}))...)
+		default:
+			if len(key) >= 2 && (key[len(key)-2] == ':' && key[len(key)-1]-'0' >= 0 &&
+				key[len(key)-1]-'0' <= 9) {
+				varKeys = append(varKeys, key)
+			}
+		}
+	}
+	return varKeys
 }
 
 func buildContentType(encodedContentType string) (string, error) {
