@@ -1,27 +1,27 @@
 base: https://api.teamleader.eu
 auth:
-    header_name: Authorization
-    header_value_prefix: Bearer
-    high_privileged_access_token: abc
-    low_privileged_access_token: def
+  header_name: Authorization
+  header_value_prefix: Bearer
+  high_privileged_access_token: abc
+  low_privileged_access_token: def
 vars:
-    userId:
-        high: 123
-        low: 456
-    docId:
-        high: abc
-        low: def
+  userId:
+    high: 123
+    low: 456
+  docId:
+    high: abc
+    low: def
 api:
-    methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
-    headers:
-    endpoints:
-        users.info/$userId:
-            operation: READ
-            method: GET
-            content_type: JSON
-            headers:
-            request_params:
-              id: $userId
-            body_params:
-              id: $userId
-              doc: $docId
+  methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
+  headers:
+  endpoints:
+    users.info/$userId:
+      - operation: READ
+        method: GET
+        content_type: JSON
+        headers:
+        request_params:
+          id: $userId
+        body_params:
+          id: $userId
+          doc: $docId

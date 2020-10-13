@@ -30,9 +30,9 @@ type Variables struct {
 
 // APIDetails is a model for the API details
 type APIDetails struct {
-	GlobalMethods []string                   `yaml:"methods"`
-	GlobalHeaders map[string]string          `yaml:"headers"`
-	Endpoints     map[string]EndpointDetails `yaml:"endpoints"`
+	GlobalMethods []string                     `yaml:"methods"`
+	GlobalHeaders map[string]string            `yaml:"headers"`
+	Endpoints     map[string][]EndpointDetails `yaml:"endpoints"`
 }
 
 // EndpointDetails is a model for an endpoint in the API
