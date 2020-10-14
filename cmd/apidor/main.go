@@ -4,9 +4,8 @@ import (
 	"flag"
 	"os"
 
-	"github.com/bncrypted/apidor/internal/apidor/testcode"
-
 	"github.com/bncrypted/apidor/internal/apidor/logger"
+	"github.com/bncrypted/apidor/internal/apidor/testcode"
 	"github.com/bncrypted/apidor/internal/apidor/workflow"
 	"github.com/bncrypted/apidor/pkg/definition"
 	"github.com/bncrypted/apidor/pkg/http"
