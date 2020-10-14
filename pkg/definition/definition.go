@@ -37,12 +37,12 @@ type APIDetails struct {
 
 // EndpointDetails is a model for an endpoint in the API
 type EndpointDetails struct {
-	Operation     string                 `yaml:"operation"`
-	Method        string                 `yaml:"method"`
-	ContentType   string                 `yaml:"content_type"`
-	Headers       map[string]string      `yaml:"headers"`
-	RequestParams map[string]string      `yaml:"request_params"`
-	BodyParams    map[string]interface{} `yaml:"body_params"`
+	Method            string                 `yaml:"method"`
+	IsDeleteOperation bool                   `yaml:"is_delete"`
+	ContentType       string                 `yaml:"content_type"`
+	Headers           map[string]string      `yaml:"headers"`
+	RequestParams     map[string]string      `yaml:"request_params"`
+	BodyParams        map[string]interface{} `yaml:"body_params"`
 }
 
 // Read is a function that reads the API definition from the given YAML file
@@ -59,5 +59,16 @@ func Read(filepath string) (Definition, error) {
 		return definition, err
 	}
 
+	definition.setDefaultValues()
 	return definition, nil
+}
+
+func (d *Definition) setDefaultValues() {
+	for endpointKey, endpointDetails := range d.API.Endpoints {
+		for endpointOperationIndex, endpointOperationDetails := range endpointDetails {
+			if endpointOperationDetails.ContentType == "" {
+				d.API.Endpoints[endpointKey][endpointOperationIndex].ContentType = "JSON"
+			}
+		}
+	}
 }

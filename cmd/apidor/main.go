@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/bncrypted/apidor/internal/apidor/logger"
+	"github.com/bncrypted/apidor/internal/apidor/testcode"
 	"github.com/bncrypted/apidor/internal/apidor/workflow"
 	"github.com/bncrypted/apidor/pkg/definition"
 	"github.com/bncrypted/apidor/pkg/http"
@@ -16,6 +17,7 @@ func main() {
 	logFile := flag.String("o", "", "Log file name")
 	proxyURI := flag.String("proxy", "", "Gives a URI to proxy HTTP traffic through")
 	rate := flag.Int("rate", 5, "Specifies maximum number of requests made per second")
+	tests := flag.String("tests", "all", "Specifies which tests should be executed")
 	isDebug := flag.Bool("debug", false, "Specifies whether to use debugging mode for verbose output")
 	flag.Parse()
 
@@ -48,11 +50,16 @@ func main() {
 	logger.RunInfo(definition.BaseURI, len(definition.API.Endpoints), loggerFlags)
 	logger.Starting()
 
-	workflowFlags := workflow.Flags{
-		Rate: *rate,
+	testCodes, err := testcode.ParseTestCodes(*tests)
+	if err != nil {
+		logger.Error(err.Error())
 	}
-	workflow.Init(workflowFlags)
-	workflow.Run(definition)
+
+	workflowFlags := workflow.Flags{
+		Rate:      *rate,
+		TestCodes: testCodes,
+	}
+	workflow.Run(definition, workflowFlags)
 
 	logger.Finished()
 }

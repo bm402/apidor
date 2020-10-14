@@ -16,8 +16,8 @@ api:
   headers:
   endpoints:
     users.info/$userId:
-      - operation: READ
-        method: GET
+      - method: GET
+        is_delete: false
         content_type: JSON
         headers:
         request_params:
