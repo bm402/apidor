@@ -24,8 +24,9 @@ type AuthDetails struct {
 
 // Variables is a model of high and low privileged variables
 type Variables struct {
-	High interface{} `yaml:"high"`
-	Low  interface{} `yaml:"low"`
+	High  interface{} `yaml:"high"`
+	Low   interface{} `yaml:"low"`
+	Alias string      `yaml:"alias"`
 }
 
 // APIDetails is a model for the API details
@@ -69,6 +70,12 @@ func (d *Definition) setDefaultValues() {
 			if endpointOperationDetails.ContentType == "" {
 				d.API.Endpoints[endpointKey][endpointOperationIndex].ContentType = "JSON"
 			}
+		}
+	}
+	for varName, varValues := range d.Vars {
+		if varValues.Alias == "" {
+			varValues.Alias = varName
+			d.Vars[varName] = varValues
 		}
 	}
 }

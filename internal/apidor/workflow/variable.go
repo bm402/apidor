@@ -82,6 +82,32 @@ func substituteAndParameterPolluteBodyParams(baseRequestOptions http.RequestOpti
 		substitutedRequestParams, substitutedBodyParams)
 }
 
+func substituteAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions,
+	vars map[string]definition.Variables, varsWrappedInArrays map[string]definition.Variables,
+	varsWrappedInMaps map[string]definition.Variables) []http.RequestOptions {
+
+	// parameter wrapping on body params
+	substitutedBodyParams := []map[string]interface{}{}
+	varsInBodyParams := variable.FindVarsInMap(baseRequestOptions.BodyParams)
+	permutations := permutation.GetAllCombinationsOfHighAndLowPrivilege(len(varsInBodyParams))
+
+	for _, permutation := range permutations {
+		substitutedBodyParams = append(substitutedBodyParams,
+			substituteMixedPrivilegeBodyParams(baseRequestOptions.BodyParams, varsInBodyParams,
+				varsWrappedInArrays, permutation))
+		substitutedBodyParams = append(substitutedBodyParams,
+			substituteMixedPrivilegeBodyParams(baseRequestOptions.BodyParams, varsInBodyParams,
+				varsWrappedInMaps, permutation))
+	}
+
+	substitutedEndpoints := substituteAllMixedPrivilegedPathParams(
+		baseRequestOptions.Endpoint, vars)
+	substitutedRequestParams := substituteAllMixedPrivilegedRequestParams(
+		baseRequestOptions.RequestParams, vars)
+	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
+		substitutedRequestParams, substitutedBodyParams)
+}
+
 func substituteHighPrivilegedPathParams(endpoint string, vars map[string]definition.Variables) string {
 	varsInPath := variable.FindVarsInString(endpoint)
 	if len(varsInPath) > 0 {
