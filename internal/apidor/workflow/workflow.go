@@ -42,6 +42,9 @@ func Run(definition definition.Definition, flags Flags) {
 	testCodes := flags.TestCodes
 	isRunAllTests := testCodes.Contains(testcode.ALL)
 
+	// wrapped vars for parameter wrapping test
+	wrappedVarsInArrays, wrappedVarsInMaps := wrapVars(definition.Vars)
+
 	for endpoint, endpointOperations := range definition.API.Endpoints {
 		unusedEndpointMethods := findUnusedEndpointMethods(definition.API.GlobalMethods, endpointOperations)
 
@@ -100,6 +103,20 @@ func Run(definition definition.Definition, flags Flags) {
 				collectedRequestOptions = substituteAndParameterPolluteBodyParams(requestOptions, definition.Vars)
 				for _, requestOptions := range collectedRequestOptions {
 					logger.TestPrefix(endpoint, "low-priv-body-pp")
+					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+						bannedResponseWords, minRequestDuration)
+				}
+			}
+
+			// parameter wrapping in body params
+			if isRunAllTests || testCodes.Contains(testcode.PW) {
+				requestOptions = baseRequestOptions.DeepCopy()
+				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+				collectedRequestOptions = substituteAndParameterWrapBodyParams(requestOptions, definition.Vars,
+					wrappedVarsInArrays, wrappedVarsInMaps)
+				for _, requestOptions := range collectedRequestOptions {
+					logger.TestPrefix(endpoint, "low-priv-body-pw")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}

@@ -168,3 +168,25 @@ func getHighPrivilegedVariableValues(requestOptions http.RequestOptions,
 
 	return highPrivilegedVarValues
 }
+
+func wrapVars(vars map[string]definition.Variables) (map[string]definition.Variables,
+	map[string]definition.Variables) {
+
+	wrappedVarsInArrays := map[string]definition.Variables{}
+	for varName, varValues := range vars {
+		wrappedVarInArray := definition.Variables{
+			High: []interface{}{varValues.High},
+			Low:  []interface{}{varValues.Low},
+		}
+		wrappedVarsInArrays[varName] = wrappedVarInArray
+	}
+	wrappedVarsInMaps := map[string]definition.Variables{}
+	for varName, varValues := range vars {
+		wrappedVarInObject := definition.Variables{
+			High: map[string]interface{}{varValues.Alias: varValues.High},
+			Low:  map[string]interface{}{varValues.Alias: varValues.Low},
+		}
+		wrappedVarsInMaps[varName] = wrappedVarInObject
+	}
+	return wrappedVarsInArrays, wrappedVarsInMaps
+}

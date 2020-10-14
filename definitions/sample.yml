@@ -8,6 +8,7 @@ vars:
   userId:
     high: 123
     low: 456
+    alias: id
   docId:
     high: abc
     low: def
@@ -15,13 +16,12 @@ api:
   methods: [GET, POST, PUT, PATCH, DELETE, OPTIONS]
   headers:
   endpoints:
-    users.info/$userId:
+    users.info:
       - method: GET
         is_delete: false
         content_type: JSON
         headers:
         request_params:
-          id: $userId
         body_params:
           id: $userId
-          doc: $docId
+          docId: $docId
