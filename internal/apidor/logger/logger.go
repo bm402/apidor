@@ -118,8 +118,8 @@ func Finished() {
 }
 
 // TestPrefix is a logger function that prints the endpoint and the test name that is taking place
-func TestPrefix(endpoint string, testName string) {
-	prefix := "[" + endpoint + "][" + testName + "] "
+func TestPrefix(requestID int, endpoint string, testName string) {
+	prefix := "[" + strconv.Itoa(requestID) + "][" + endpoint + "][" + testName + "] "
 	if isDebug {
 		writeln(prefix)
 		writeln("")
