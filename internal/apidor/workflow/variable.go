@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"sort"
+	"strconv"
 
 	"github.com/bncrypted/apidor/internal/apidor/permutation"
 	"github.com/bncrypted/apidor/pkg/definition"
@@ -104,6 +105,72 @@ func substituteAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions
 		baseRequestOptions.Endpoint, vars)
 	substitutedRequestParams := substituteAllMixedPrivilegedRequestParams(
 		baseRequestOptions.RequestParams, vars)
+	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
+		substitutedRequestParams, substitutedBodyParams)
+}
+
+func substituteAndMoveBodyParamsToRequestParams(baseRequestOptions http.RequestOptions,
+	vars map[string]definition.Variables) []http.RequestOptions {
+
+	// move top-level body params to request params
+	for key, value := range baseRequestOptions.BodyParams {
+		switch value.(type) {
+		case string:
+			baseRequestOptions.RequestParams[key] = value.(string)
+		case int:
+			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		}
+	}
+
+	substitutedEndpoints := substituteAllMixedPrivilegedPathParams(
+		baseRequestOptions.Endpoint, vars)
+	substitutedRequestParams := substituteAllMixedPrivilegedRequestParams(
+		baseRequestOptions.RequestParams, vars)
+	substitutedBodyParams := substituteAllMixedPrivilegedBodyParams(
+		baseRequestOptions.BodyParams, vars)
+
+	// add empty body
+	substitutedBodyParams = append(substitutedBodyParams, map[string]interface{}{})
+
+	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
+		substitutedRequestParams, substitutedBodyParams)
+}
+
+func substituteAndMoveAndParameterPolluteBodyParamsToRequestParams(
+	baseRequestOptions http.RequestOptions, vars map[string]definition.Variables) []http.RequestOptions {
+
+	// move top-level body params to request params
+	for key, value := range baseRequestOptions.BodyParams {
+		switch value.(type) {
+		case string:
+			baseRequestOptions.RequestParams[key] = value.(string)
+		case int:
+			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		}
+	}
+
+	// parameter pollution on request params
+	substitutedRequestParams := []map[string]string{}
+	varsInRequestParams := variable.FindVarsInMapOfStrings(baseRequestOptions.RequestParams)
+	duplicatedVarsInRequestParams := duplicateVars(varsInRequestParams)
+	permutations := permutation.GetCombinationsOfOppositePrivilege(len(duplicatedVarsInRequestParams))
+	duplicatedRequestParams := duplicateRequestParamsWithVars(baseRequestOptions.RequestParams,
+		varsInRequestParams)
+
+	for _, permutation := range permutations {
+		requestParams := substituteMixedPrivilegeRequestParams(duplicatedRequestParams,
+			duplicatedVarsInRequestParams, vars, permutation)
+		substitutedRequestParams = append(substitutedRequestParams, requestParams)
+	}
+
+	substitutedEndpoints := substituteAllMixedPrivilegedPathParams(
+		baseRequestOptions.Endpoint, vars)
+	substitutedBodyParams := substituteAllMixedPrivilegedBodyParams(
+		baseRequestOptions.BodyParams, vars)
+
+	// add empty body
+	substitutedBodyParams = append(substitutedBodyParams, map[string]interface{}{})
+
 	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
 		substitutedRequestParams, substitutedBodyParams)
 }

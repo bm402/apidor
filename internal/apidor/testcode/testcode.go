@@ -28,8 +28,8 @@ const (
 	PW = "pw"
 	// RPS is a TestCode const for a request parameter substitution test
 	RPS = "rps"
-	// GIT is a TestCode const for a .git repo test
-	GIT = "git"
+	// RPSPP is a TestCode const for a request parameter substitution test with parameter pollution
+	RPSPP = "rpspp"
 	// JSON is a TestCode const for a .json test
 	JSON = "json"
 	// ALL is a TestCode const for all tests
@@ -69,7 +69,7 @@ func (tcs TestCodes) Contains(testCode TestCode) bool {
 func getTestCode(testCodeString string) (TestCode, bool) {
 	testCode := TestCode(testCodeString)
 	switch testCode {
-	case HP, LP, NP, RPP, BPP, MR, PW, RPS, GIT, JSON, ALL:
+	case HP, LP, NP, RPP, BPP, MR, PW, RPS, RPSPP, JSON, ALL:
 		return testCode, true
 	}
 	return "", false

@@ -2,7 +2,6 @@ package workflow
 
 import (
 	externalhttp "net/http"
-	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -51,7 +50,7 @@ func Run(definition model.Definition, flags Flags) {
 				endpointName: []model.EndpointDetails{endpointOperationDetails}}
 		} else {
 			logger.Fatal("Could not find endpoint to test \"" + flags.EndpointToTest + "\"")
-			os.Exit(0)
+			return
 		}
 	}
 
@@ -137,6 +136,32 @@ func Run(definition model.Definition, flags Flags) {
 					logger.TestPrefix(requestID, endpoint, "low-priv-body-pw")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
+				}
+			}
+
+			// request parameter substitution
+			if isRunAllTests || testCodes.Contains(testcode.RPS) || testCodes.Contains(testcode.RPSPP) {
+				if isRunAllTests || testCodes.Contains(testcode.RPSPP) {
+					requestOptions = baseRequestOptions.DeepCopy()
+					requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+						definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+					collectedRequestOptions = substituteAndMoveAndParameterPolluteBodyParamsToRequestParams(
+						requestOptions, definition.Vars)
+					for _, requestOptions := range collectedRequestOptions {
+						logger.TestPrefix(requestID, endpoint, "low-priv-rps-pp")
+						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+							bannedResponseWords, minRequestDuration)
+					}
+				} else {
+					requestOptions = baseRequestOptions.DeepCopy()
+					requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+						definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+					collectedRequestOptions = substituteAndMoveBodyParamsToRequestParams(requestOptions, definition.Vars)
+					for _, requestOptions := range collectedRequestOptions {
+						logger.TestPrefix(requestID, endpoint, "low-priv-rps")
+						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+							bannedResponseWords, minRequestDuration)
+					}
 				}
 			}
 
