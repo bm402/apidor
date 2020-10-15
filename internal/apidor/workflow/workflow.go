@@ -2,24 +2,27 @@ package workflow
 
 import (
 	externalhttp "net/http"
+	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/bncrypted/apidor/internal/apidor/logger"
 	"github.com/bncrypted/apidor/internal/apidor/testcode"
-	"github.com/bncrypted/apidor/pkg/definition"
+	model "github.com/bncrypted/apidor/pkg/definition"
 	"github.com/bncrypted/apidor/pkg/http"
 )
 
 // Flags is a workflow struct that holds command line flags for customising the workflow
 type Flags struct {
-	Rate      int
-	TestCodes testcode.TestCodes
+	EndpointToTest string
+	Rate           int
+	TestCodes      testcode.TestCodes
 }
 
 type apiSummary struct {
 	baseURI       string
-	authDetails   definition.AuthDetails
+	authDetails   model.AuthDetails
 	globalHeaders map[string]string
 	globalMethods []string
 }
@@ -29,7 +32,7 @@ type verifier func(*externalhttp.Response, []string) (int, string)
 var requestID int
 
 // Run is a workflow function that orchestrates the API testing
-func Run(definition definition.Definition, flags Flags) {
+func Run(definition model.Definition, flags Flags) {
 
 	apiSummary := apiSummary{
 		baseURI:       definition.BaseURI,
@@ -40,6 +43,17 @@ func Run(definition definition.Definition, flags Flags) {
 
 	millisecondsPerRequest := 1000 / flags.Rate
 	minRequestDuration := time.Duration(millisecondsPerRequest) * time.Millisecond
+
+	if flags.EndpointToTest != "all" {
+		if endpointName, endpointOperationDetails,
+			ok := verifyEndpoint(flags.EndpointToTest, definition.API.Endpoints); ok {
+			definition.API.Endpoints = map[string][]model.EndpointDetails{
+				endpointName: []model.EndpointDetails{endpointOperationDetails}}
+		} else {
+			logger.Fatal("Could not find endpoint to test \"" + flags.EndpointToTest + "\"")
+			os.Exit(0)
+		}
+	}
 
 	testCodes := flags.TestCodes
 	isRunAllTests := testCodes.Contains(testcode.ALL)
@@ -175,4 +189,23 @@ func testEndpoint(requestOptions http.RequestOptions, verifier verifier,
 
 	durationSinceStartTime := time.Since(startTime)
 	time.Sleep(minRequestDuration - durationSinceStartTime)
+}
+
+func verifyEndpoint(endpointCode string, endpoints map[string][]model.EndpointDetails) (string,
+	model.EndpointDetails, bool) {
+
+	endpointCodeComponents := strings.Split(endpointCode, " ")
+	if len(endpointCodeComponents) != 2 {
+		return "", model.EndpointDetails{}, false
+	}
+
+	if endpointDetails, ok := endpoints[endpointCodeComponents[1]]; ok {
+		for _, endpointOperationDetails := range endpointDetails {
+			if endpointOperationDetails.Method == endpointCodeComponents[0] {
+				return endpointCodeComponents[1], endpointOperationDetails, true
+			}
+		}
+	}
+
+	return "", model.EndpointDetails{}, false
 }
