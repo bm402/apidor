@@ -12,8 +12,9 @@ import (
 )
 
 func main() {
-	definitionFile := flag.String("d", "definitions/sample.yml", "Path to the API definition YAML file")
 	localCertFile := flag.String("cert", "", "Path to a local certificate authority file")
+	definitionFile := flag.String("d", "definitions/sample.yml", "Path to the API definition YAML file")
+	endpoint := flag.String("e", "all", "Specifies a single endpoint operation to test")
 	logFile := flag.String("o", "", "Log file name")
 	proxyURI := flag.String("proxy", "", "Gives a URI to proxy HTTP traffic through")
 	rate := flag.Int("rate", 5, "Specifies maximum number of requests made per second")
@@ -56,8 +57,9 @@ func main() {
 	}
 
 	workflowFlags := workflow.Flags{
-		Rate:      *rate,
-		TestCodes: testCodes,
+		EndpointToTest: *endpoint,
+		Rate:           *rate,
+		TestCodes:      testCodes,
 	}
 	workflow.Run(definition, workflowFlags)
 
