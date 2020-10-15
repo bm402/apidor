@@ -154,6 +154,18 @@ func Run(definition model.Definition, flags Flags) {
 				}
 			}
 
+			// append .json
+			if isRunAllTests || testCodes.Contains(testcode.JSON) {
+				requestOptions = baseRequestOptions.DeepCopy()
+				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+				requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
+				requestOptions.Endpoint += ".json"
+				logger.TestPrefix(requestID, endpoint, "low-priv-json")
+				testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+					bannedResponseWords, minRequestDuration)
+			}
+
 			// no privilege request
 			if isRunAllTests || testCodes.Contains(testcode.NP) {
 				requestOptions = baseRequestOptions.DeepCopy()
