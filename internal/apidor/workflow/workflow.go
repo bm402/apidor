@@ -26,6 +26,8 @@ type apiSummary struct {
 
 type verifier func(*externalhttp.Response, []string) (int, string)
 
+var requestID int
+
 // Run is a workflow function that orchestrates the API testing
 func Run(definition definition.Definition, flags Flags) {
 
@@ -42,6 +44,8 @@ func Run(definition definition.Definition, flags Flags) {
 	testCodes := flags.TestCodes
 	isRunAllTests := testCodes.Contains(testcode.ALL)
 
+	requestID = 1
+
 	// wrapped vars for parameter wrapping test
 	wrappedVarsInArrays, wrappedVarsInMaps := wrapVars(definition.Vars)
 
@@ -57,14 +61,14 @@ func Run(definition definition.Definition, flags Flags) {
 			// high privileged request
 			if isRunAllTests || testCodes.Contains(testcode.HP) {
 				if endpointOperationDetails.IsDeleteOperation {
-					logger.TestPrefix(endpoint, "high-priv")
+					logger.TestPrefix(requestID, endpoint, "high-priv")
 					logger.TestResult("Skipping delete operation")
 				} else {
 					requestOptions = baseRequestOptions.DeepCopy()
 					requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 						definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.High)
 					requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
-					logger.TestPrefix(endpoint, "high-priv")
+					logger.TestPrefix(requestID, endpoint, "high-priv")
 					testEndpoint(requestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 				}
 			}
@@ -76,7 +80,7 @@ func Run(definition definition.Definition, flags Flags) {
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
 				collectedRequestOptions = substituteMixedPrivilegedVariablePermutations(requestOptions, definition.Vars)
 				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(endpoint, "low-priv-perms")
+					logger.TestPrefix(requestID, endpoint, "low-priv-perms")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}
@@ -89,7 +93,7 @@ func Run(definition definition.Definition, flags Flags) {
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
 				collectedRequestOptions = substituteAndParameterPolluteRequestParams(requestOptions, definition.Vars)
 				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(endpoint, "low-priv-request-pp")
+					logger.TestPrefix(requestID, endpoint, "low-priv-request-pp")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}
@@ -102,7 +106,7 @@ func Run(definition definition.Definition, flags Flags) {
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
 				collectedRequestOptions = substituteAndParameterPolluteBodyParams(requestOptions, definition.Vars)
 				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(endpoint, "low-priv-body-pp")
+					logger.TestPrefix(requestID, endpoint, "low-priv-body-pp")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}
@@ -116,7 +120,7 @@ func Run(definition definition.Definition, flags Flags) {
 				collectedRequestOptions = substituteAndParameterWrapBodyParams(requestOptions, definition.Vars,
 					wrappedVarsInArrays, wrappedVarsInMaps)
 				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(endpoint, "low-priv-body-pw")
+					logger.TestPrefix(requestID, endpoint, "low-priv-body-pw")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}
@@ -130,7 +134,7 @@ func Run(definition definition.Definition, flags Flags) {
 				requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 				collectedRequestOptions = substituteUnusedMethods(requestOptions, unusedEndpointMethods)
 				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(endpoint, "low-priv-msub")
+					logger.TestPrefix(requestID, endpoint, "low-priv-msub")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}
@@ -141,7 +145,7 @@ func Run(definition definition.Definition, flags Flags) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = removeAuthHeaderFromRequestOptions(requestOptions, definition.AuthDetails.HeaderName)
 				requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
-				logger.TestPrefix(endpoint, "no-priv")
+				logger.TestPrefix(requestID, endpoint, "no-priv")
 				testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 					bannedResponseWords, minRequestDuration)
 			}
@@ -153,6 +157,9 @@ func testEndpoint(requestOptions http.RequestOptions, verifier verifier,
 	bannedResponseWords []string, minRequestDuration time.Duration) {
 
 	startTime := time.Now()
+	requestOptions.Headers["X-Apidor-Request-ID"] = strconv.Itoa(requestID)
+	requestID++
+
 	response, err := buildAndSendRequest(requestOptions)
 	if err != nil {
 		logger.Message("Skipping due to error: " + err.Error())
