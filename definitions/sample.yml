@@ -25,20 +25,3 @@ api:
         body_params:
           id: $userId
           docId: $docId
-      - method: POST
-        is_delete: false
-        content_type: JSON
-        headers:
-        request_params:
-        body_params:
-          id: $userId
-          docId: $docId
-    users.outfo:
-      - method: GET
-        is_delete: false
-        content_type: JSON
-        headers:
-        request_params:
-        body_params:
-          id: $userId
-          docId: $docId
