@@ -14,9 +14,10 @@ import (
 
 // Flags is a workflow struct that holds command line flags for customising the workflow
 type Flags struct {
-	EndpointToTest string
-	Rate           int
-	TestCodes      testcode.TestCodes
+	EndpointToTest   string
+	Rate             int
+	TestCodes        testcode.TestCodes
+	IsIgnoreBaseCase bool
 }
 
 type apiSummary struct {
@@ -91,11 +92,20 @@ func Run(definition model.Definition, flags Flags) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-				collectedRequestOptions = substituteMixedPrivilegedVariablePermutations(requestOptions, definition.Vars)
-				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-perms")
-					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-						bannedResponseWords, minRequestDuration)
+
+				baseCaseRequestOptions := substituteLowPrivilegedVariables(requestOptions, definition.Vars)
+				logger.TestPrefix(requestID, endpoint, "low-priv-perms-base")
+				baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
+
+				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
+					collectedRequestOptions = substituteMixedPrivilegedVariables(requestOptions, definition.Vars)
+					for _, requestOptions := range collectedRequestOptions {
+						logger.TestPrefix(requestID, endpoint, "low-priv-perms")
+						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+							bannedResponseWords, minRequestDuration)
+					}
+				} else {
+					logger.Message("\tBase case failed, skipping rest of [low-priv-perms]")
 				}
 			}
 
@@ -104,11 +114,22 @@ func Run(definition model.Definition, flags Flags) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-				collectedRequestOptions = substituteAndParameterPolluteRequestParams(requestOptions, definition.Vars)
-				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-request-pp")
-					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-						bannedResponseWords, minRequestDuration)
+
+				baseCaseRequestOptions := substituteLowPrivilegedAndParameterPolluteRequestParams(
+					requestOptions, definition.Vars)
+				logger.TestPrefix(requestID, endpoint, "low-priv-request-pp-base")
+				baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
+
+				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
+					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteRequestParams(
+						requestOptions, definition.Vars)
+					for _, requestOptions := range collectedRequestOptions {
+						logger.TestPrefix(requestID, endpoint, "low-priv-request-pp")
+						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+							bannedResponseWords, minRequestDuration)
+					}
+				} else {
+					logger.Message("\tBase case failed, skipping rest of [low-priv-request-pp]")
 				}
 			}
 
@@ -117,11 +138,22 @@ func Run(definition model.Definition, flags Flags) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-				collectedRequestOptions = substituteAndParameterPolluteBodyParams(requestOptions, definition.Vars)
-				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-body-pp")
-					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-						bannedResponseWords, minRequestDuration)
+
+				baseCaseRequestOptions := substituteLowPrivilegedAndParameterPolluteBodyParams(
+					requestOptions, definition.Vars)
+				logger.TestPrefix(requestID, endpoint, "low-priv-body-pp-base")
+				baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
+
+				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
+					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteBodyParams(
+						requestOptions, definition.Vars)
+					for _, requestOptions := range collectedRequestOptions {
+						logger.TestPrefix(requestID, endpoint, "low-priv-body-pp")
+						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+							bannedResponseWords, minRequestDuration)
+					}
+				} else {
+					logger.Message("\tBase case failed, skipping rest of [low-priv-body-pp]")
 				}
 			}
 
@@ -130,22 +162,56 @@ func Run(definition model.Definition, flags Flags) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-				collectedRequestOptions = substituteAndParameterWrapBodyParams(requestOptions, definition.Vars,
-					wrappedVarsInArrays, wrappedVarsInMaps)
-				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-body-pw")
-					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-						bannedResponseWords, minRequestDuration)
+
+				collectedBaseCaseRequestOptions := substituteLowPrivilegedAndParameterWrapBodyParams(
+					requestOptions, definition.Vars, wrappedVarsInArrays, wrappedVarsInMaps)
+				isBaseStatus2xx := false
+
+				for _, baseCaseRequestOptions := range collectedBaseCaseRequestOptions {
+					logger.TestPrefix(requestID, endpoint, "low-priv-body-pw-base")
+					baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK,
+						[]string{}, minRequestDuration)
+					if is2xx(baseStatus) {
+						isBaseStatus2xx = true
+						break
+					}
+				}
+
+				if isBaseStatus2xx || flags.IsIgnoreBaseCase {
+					collectedRequestOptions = substituteMixedPrivilegedAndParameterWrapBodyParams(
+						requestOptions, definition.Vars, wrappedVarsInArrays, wrappedVarsInMaps)
+					for _, requestOptions := range collectedRequestOptions {
+						logger.TestPrefix(requestID, endpoint, "low-priv-body-pw")
+						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+							bannedResponseWords, minRequestDuration)
+					}
+				} else {
+					logger.Message("\tBase cases failed, skipping rest of [low-priv-body-pw]")
 				}
 			}
 
 			// request parameter substitution
-			if isRunAllTests || testCodes.Contains(testcode.RPS) || testCodes.Contains(testcode.RPSPP) {
-				if isRunAllTests || testCodes.Contains(testcode.RPSPP) {
-					requestOptions = baseRequestOptions.DeepCopy()
-					requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
-						definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-					collectedRequestOptions = substituteAndMoveAndParameterPolluteBodyParamsToRequestParams(
+			if isRunAllTests || testCodes.Contains(testcode.RPSPP) {
+				requestOptions = baseRequestOptions.DeepCopy()
+				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+
+				collectedBaseCaseRequestOptions := substituteLowPrivilegedAndParameterPolluteBodyParamsToRequestParams(
+					requestOptions, definition.Vars)
+				isBaseStatus2xx := false
+
+				for _, baseCaseRequestOptions := range collectedBaseCaseRequestOptions {
+					logger.TestPrefix(requestID, endpoint, "low-priv-rps-pp-base")
+					baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK,
+						[]string{}, minRequestDuration)
+					if is2xx(baseStatus) {
+						isBaseStatus2xx = true
+						break
+					}
+				}
+
+				if isBaseStatus2xx || flags.IsIgnoreBaseCase {
+					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteBodyParamsToRequestParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
 						logger.TestPrefix(requestID, endpoint, "low-priv-rps-pp")
@@ -153,15 +219,38 @@ func Run(definition model.Definition, flags Flags) {
 							bannedResponseWords, minRequestDuration)
 					}
 				} else {
-					requestOptions = baseRequestOptions.DeepCopy()
-					requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
-						definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
-					collectedRequestOptions = substituteAndMoveBodyParamsToRequestParams(requestOptions, definition.Vars)
+					logger.Message("\tBase cases failed, skipping rest of [low-priv-rps-pp]")
+				}
+
+			} else if testCodes.Contains(testcode.RPS) {
+				requestOptions = baseRequestOptions.DeepCopy()
+				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
+					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
+
+				collectedBaseCaseRequestOptions := substituteLowPrivilegedAndMoveBodyParamsToRequestParams(
+					requestOptions, definition.Vars)
+				isBaseStatus2xx := false
+
+				for _, baseCaseRequestOptions := range collectedBaseCaseRequestOptions {
+					logger.TestPrefix(requestID, endpoint, "low-priv-rps-base")
+					baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK,
+						[]string{}, minRequestDuration)
+					if is2xx(baseStatus) {
+						isBaseStatus2xx = true
+						break
+					}
+				}
+
+				if isBaseStatus2xx || flags.IsIgnoreBaseCase {
+					collectedRequestOptions = substituteMixedPrivilegedAndMoveBodyParamsToRequestParams(
+						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
 						logger.TestPrefix(requestID, endpoint, "low-priv-rps")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
+				} else {
+					logger.Message("\tBase cases failed, skipping rest of [low-priv-rps]")
 				}
 			}
 
@@ -205,7 +294,7 @@ func Run(definition model.Definition, flags Flags) {
 }
 
 func testEndpoint(requestOptions http.RequestOptions, verifier verifier,
-	bannedResponseWords []string, minRequestDuration time.Duration) {
+	bannedResponseWords []string, minRequestDuration time.Duration) int {
 
 	startTime := time.Now()
 	requestOptions.Headers["X-Apidor-Request-ID"] = strconv.Itoa(requestID)
@@ -214,18 +303,20 @@ func testEndpoint(requestOptions http.RequestOptions, verifier verifier,
 	response, err := buildAndSendRequest(requestOptions)
 	if err != nil {
 		logger.Message("Skipping due to error: " + err.Error())
-		return
+		return 0
 	}
 
 	status, result := verifier(response, bannedResponseWords)
 	logger.TestResult(strconv.Itoa(status) + " " + result)
 
-	if result[:2] != "OK" {
-		logger.DumpRequest(requestOptions)
-	}
+	// if result[:2] != "OK" {
+	// 	logger.DumpRequest(requestOptions)
+	// }
 
 	durationSinceStartTime := time.Since(startTime)
 	time.Sleep(minRequestDuration - durationSinceStartTime)
+
+	return status
 }
 
 func verifyEndpoint(endpointCode string, endpoints map[string][]model.EndpointDetails) (string,
@@ -245,4 +336,8 @@ func verifyEndpoint(endpointCode string, endpoints map[string][]model.EndpointDe
 	}
 
 	return "", model.EndpointDetails{}, false
+}
+
+func is2xx(status int) bool {
+	return status/100 == 2
 }

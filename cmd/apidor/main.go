@@ -20,6 +20,7 @@ func main() {
 	rate := flag.Int("rate", 5, "Specifies maximum number of requests made per second")
 	tests := flag.String("tests", "all", "Specifies which tests should be executed")
 	isDebug := flag.Bool("debug", false, "Specifies whether to use debugging mode for verbose output")
+	isIgnoreBaseCase := flag.Bool("ignore-base-case", false, "Specifies whether to ignore base case failure")
 	flag.Parse()
 
 	httpFlags := http.Flags{
@@ -57,9 +58,10 @@ func main() {
 	}
 
 	workflowFlags := workflow.Flags{
-		EndpointToTest: *endpoint,
-		Rate:           *rate,
-		TestCodes:      testCodes,
+		EndpointToTest:   *endpoint,
+		Rate:             *rate,
+		TestCodes:        testCodes,
+		IsIgnoreBaseCase: *isIgnoreBaseCase,
 	}
 	workflow.Run(definition, workflowFlags)
 
