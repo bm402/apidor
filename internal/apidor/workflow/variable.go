@@ -16,11 +16,19 @@ func substituteHighPrivilegedVariables(requestOptions http.RequestOptions,
 	requestOptions.Endpoint = substituteHighPrivilegedPathParams(requestOptions.Endpoint, vars)
 	requestOptions.RequestParams = substituteHighPrivilegedRequestParams(requestOptions.RequestParams, vars)
 	requestOptions.BodyParams = substituteHighPrivilegedBodyParams(requestOptions.BodyParams, vars)
-
 	return requestOptions
 }
 
-func substituteMixedPrivilegedVariablePermutations(baseRequestOptions http.RequestOptions,
+func substituteLowPrivilegedVariables(requestOptions http.RequestOptions,
+	vars map[string]definition.Variables) http.RequestOptions {
+
+	requestOptions.Endpoint = substituteLowPrivilegedPathParams(requestOptions.Endpoint, vars)
+	requestOptions.RequestParams = substituteLowPrivilegedRequestParams(requestOptions.RequestParams, vars)
+	requestOptions.BodyParams = substituteLowPrivilegedBodyParams(requestOptions.BodyParams, vars)
+	return requestOptions
+}
+
+func substituteMixedPrivilegedVariables(baseRequestOptions http.RequestOptions,
 	vars map[string]definition.Variables) []http.RequestOptions {
 
 	substitutedEndpoints := substituteAllMixedPrivilegedPathParams(
@@ -33,7 +41,7 @@ func substituteMixedPrivilegedVariablePermutations(baseRequestOptions http.Reque
 		substitutedRequestParams, substitutedBodyParams)
 }
 
-func substituteAndParameterPolluteRequestParams(baseRequestOptions http.RequestOptions,
+func substituteMixedPrivilegedAndParameterPolluteRequestParams(baseRequestOptions http.RequestOptions,
 	vars map[string]definition.Variables) []http.RequestOptions {
 
 	// parameter pollution on request params
@@ -58,7 +66,21 @@ func substituteAndParameterPolluteRequestParams(baseRequestOptions http.RequestO
 		substitutedRequestParams, substitutedBodyParams)
 }
 
-func substituteAndParameterPolluteBodyParams(baseRequestOptions http.RequestOptions,
+func substituteLowPrivilegedAndParameterPolluteRequestParams(requestOptions http.RequestOptions,
+	vars map[string]definition.Variables) http.RequestOptions {
+
+	// parameter pollution on request params
+	varsInRequestParams := variable.FindVarsInMapOfStrings(requestOptions.RequestParams)
+	duplicatedRequestParams := duplicateRequestParamsWithVars(requestOptions.RequestParams,
+		varsInRequestParams)
+	requestOptions.RequestParams = substituteLowPrivilegedRequestParams(duplicatedRequestParams, vars)
+
+	requestOptions.Endpoint = substituteLowPrivilegedPathParams(requestOptions.Endpoint, vars)
+	requestOptions.BodyParams = substituteLowPrivilegedBodyParams(requestOptions.BodyParams, vars)
+	return requestOptions
+}
+
+func substituteMixedPrivilegedAndParameterPolluteBodyParams(baseRequestOptions http.RequestOptions,
 	vars map[string]definition.Variables) []http.RequestOptions {
 
 	// parameter pollution on body params
@@ -83,7 +105,21 @@ func substituteAndParameterPolluteBodyParams(baseRequestOptions http.RequestOpti
 		substitutedRequestParams, substitutedBodyParams)
 }
 
-func substituteAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions,
+func substituteLowPrivilegedAndParameterPolluteBodyParams(requestOptions http.RequestOptions,
+	vars map[string]definition.Variables) http.RequestOptions {
+
+	// parameter pollution on body params
+	varsInBodyParams := variable.FindVarsInMap(requestOptions.BodyParams)
+	duplicatedBodyParams := duplicateBodyParamsWithVars(requestOptions.BodyParams,
+		varsInBodyParams)
+	requestOptions.BodyParams = substituteLowPrivilegedBodyParams(duplicatedBodyParams, vars)
+
+	requestOptions.Endpoint = substituteLowPrivilegedPathParams(requestOptions.Endpoint, vars)
+	requestOptions.RequestParams = substituteLowPrivilegedRequestParams(requestOptions.RequestParams, vars)
+	return requestOptions
+}
+
+func substituteMixedPrivilegedAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions,
 	vars map[string]definition.Variables, varsWrappedInArrays map[string]definition.Variables,
 	varsWrappedInMaps map[string]definition.Variables) []http.RequestOptions {
 
@@ -109,7 +145,26 @@ func substituteAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions
 		substitutedRequestParams, substitutedBodyParams)
 }
 
-func substituteAndMoveBodyParamsToRequestParams(baseRequestOptions http.RequestOptions,
+func substituteLowPrivilegedAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions,
+	vars map[string]definition.Variables, varsWrappedInArrays map[string]definition.Variables,
+	varsWrappedInMaps map[string]definition.Variables) []http.RequestOptions {
+
+	// parameter wrapping on body params
+	substitutedBodyParams := []map[string]interface{}{}
+	substitutedBodyParams = append(substitutedBodyParams,
+		substituteLowPrivilegedBodyParams(baseRequestOptions.BodyParams, varsWrappedInArrays))
+	substitutedBodyParams = append(substitutedBodyParams,
+		substituteLowPrivilegedBodyParams(baseRequestOptions.BodyParams, varsWrappedInMaps))
+
+	substitutedEndpoints := []string{substituteLowPrivilegedPathParams(
+		baseRequestOptions.Endpoint, vars)}
+	substitutedRequestParams := []map[string]string{substituteLowPrivilegedRequestParams(
+		baseRequestOptions.RequestParams, vars)}
+	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
+		substitutedRequestParams, substitutedBodyParams)
+}
+
+func substituteMixedPrivilegedAndMoveBodyParamsToRequestParams(baseRequestOptions http.RequestOptions,
 	vars map[string]definition.Variables) []http.RequestOptions {
 
 	// move top-level body params to request params
@@ -136,7 +191,34 @@ func substituteAndMoveBodyParamsToRequestParams(baseRequestOptions http.RequestO
 		substitutedRequestParams, substitutedBodyParams)
 }
 
-func substituteAndMoveAndParameterPolluteBodyParamsToRequestParams(
+func substituteLowPrivilegedAndMoveBodyParamsToRequestParams(baseRequestOptions http.RequestOptions,
+	vars map[string]definition.Variables) []http.RequestOptions {
+
+	// move top-level body params to request params
+	for key, value := range baseRequestOptions.BodyParams {
+		switch value.(type) {
+		case string:
+			baseRequestOptions.RequestParams[key] = value.(string)
+		case int:
+			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		}
+	}
+
+	substitutedEndpoints := []string{substituteLowPrivilegedPathParams(
+		baseRequestOptions.Endpoint, vars)}
+	substitutedRequestParams := []map[string]string{substituteLowPrivilegedRequestParams(
+		baseRequestOptions.RequestParams, vars)}
+	substitutedBodyParams := []map[string]interface{}{substituteLowPrivilegedBodyParams(
+		baseRequestOptions.BodyParams, vars)}
+
+	// add empty body
+	substitutedBodyParams = append(substitutedBodyParams, map[string]interface{}{})
+
+	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
+		substitutedRequestParams, substitutedBodyParams)
+}
+
+func substituteMixedPrivilegedAndParameterPolluteBodyParamsToRequestParams(
 	baseRequestOptions http.RequestOptions, vars map[string]definition.Variables) []http.RequestOptions {
 
 	// move top-level body params to request params
@@ -175,6 +257,38 @@ func substituteAndMoveAndParameterPolluteBodyParamsToRequestParams(
 		substitutedRequestParams, substitutedBodyParams)
 }
 
+func substituteLowPrivilegedAndParameterPolluteBodyParamsToRequestParams(baseRequestOptions http.RequestOptions,
+	vars map[string]definition.Variables) []http.RequestOptions {
+
+	// move top-level body params to request params
+	for key, value := range baseRequestOptions.BodyParams {
+		switch value.(type) {
+		case string:
+			baseRequestOptions.RequestParams[key] = value.(string)
+		case int:
+			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		}
+	}
+
+	// parameter pollution on request params
+	varsInRequestParams := variable.FindVarsInMapOfStrings(baseRequestOptions.RequestParams)
+	duplicatedRequestParams := duplicateRequestParamsWithVars(baseRequestOptions.RequestParams,
+		varsInRequestParams)
+	substitutedRequestParams := []map[string]string{substituteLowPrivilegedRequestParams(
+		duplicatedRequestParams, vars)}
+
+	substitutedEndpoints := []string{substituteLowPrivilegedPathParams(
+		baseRequestOptions.Endpoint, vars)}
+	substitutedBodyParams := []map[string]interface{}{substituteLowPrivilegedBodyParams(
+		baseRequestOptions.BodyParams, vars)}
+
+	// add empty body
+	substitutedBodyParams = append(substitutedBodyParams, map[string]interface{}{})
+
+	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
+		substitutedRequestParams, substitutedBodyParams)
+}
+
 func substituteHighPrivilegedPathParams(endpoint string, vars map[string]definition.Variables) string {
 	varsInPath := variable.FindVarsInString(endpoint)
 	if len(varsInPath) > 0 {
@@ -182,6 +296,20 @@ func substituteHighPrivilegedPathParams(endpoint string, vars map[string]definit
 		for _, varInPath := range varsInPath {
 			if varToSubstitute, ok := getVarsFromDefinition(varInPath, vars); ok {
 				varsToSubstitute[varInPath] = varToSubstitute.High
+			}
+		}
+		endpoint = variable.SubstituteVarsInString(endpoint, varsToSubstitute)
+	}
+	return endpoint
+}
+
+func substituteLowPrivilegedPathParams(endpoint string, vars map[string]definition.Variables) string {
+	varsInPath := variable.FindVarsInString(endpoint)
+	if len(varsInPath) > 0 {
+		varsToSubstitute := make(map[string]interface{})
+		for _, varInPath := range varsInPath {
+			if varToSubstitute, ok := getVarsFromDefinition(varInPath, vars); ok {
+				varsToSubstitute[varInPath] = varToSubstitute.Low
 			}
 		}
 		endpoint = variable.SubstituteVarsInString(endpoint, varsToSubstitute)
@@ -239,6 +367,22 @@ func substituteHighPrivilegedRequestParams(requestParams map[string]string,
 	return requestParams
 }
 
+func substituteLowPrivilegedRequestParams(requestParams map[string]string,
+	vars map[string]definition.Variables) map[string]string {
+
+	varsInRequestParams := variable.FindVarsInMapOfStrings(requestParams)
+	if len(varsInRequestParams) > 0 {
+		varsToSubstitute := make(map[string]interface{})
+		for _, varInRequestParams := range varsInRequestParams {
+			if varToSubstitute, ok := getVarsFromDefinition(varInRequestParams, vars); ok {
+				varsToSubstitute[varInRequestParams] = varToSubstitute.Low
+			}
+		}
+		requestParams = variable.SubstituteVarsInMapOfStrings(requestParams, varsToSubstitute)
+	}
+	return requestParams
+}
+
 func substituteAllMixedPrivilegedRequestParams(baseRequestParams map[string]string,
 	vars map[string]definition.Variables) []map[string]string {
 
@@ -283,6 +427,22 @@ func substituteHighPrivilegedBodyParams(bodyParams map[string]interface{},
 		for _, varInBodyParams := range varsInBodyParams {
 			if varToSubstitute, ok := getVarsFromDefinition(varInBodyParams, vars); ok {
 				varsToSubstitute[varInBodyParams] = varToSubstitute.High
+			}
+		}
+		bodyParams = variable.SubstituteVarsInMap(bodyParams, varsToSubstitute)
+	}
+	return bodyParams
+}
+
+func substituteLowPrivilegedBodyParams(bodyParams map[string]interface{},
+	vars map[string]definition.Variables) map[string]interface{} {
+
+	varsInBodyParams := variable.FindVarsInMap(bodyParams)
+	if len(varsInBodyParams) > 0 {
+		varsToSubstitute := make(map[string]interface{})
+		for _, varInBodyParams := range varsInBodyParams {
+			if varToSubstitute, ok := getVarsFromDefinition(varInBodyParams, vars); ok {
+				varsToSubstitute[varInBodyParams] = varToSubstitute.Low
 			}
 		}
 		bodyParams = variable.SubstituteVarsInMap(bodyParams, varsToSubstitute)
