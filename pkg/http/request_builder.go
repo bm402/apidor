@@ -6,10 +6,12 @@ import (
 	"crypto/x509"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -48,28 +50,59 @@ func buildURI(baseURI string, endpoint string, requestParams map[string]string) 
 	return uri
 }
 
-func buildBody(encodedContentType string, bodyParams map[string]interface{}) ([]byte, error) {
+func buildBody(contentType string, bodyParams map[string]interface{}) ([]byte, error) {
 	var body []byte
 	var err error
 
-	switch encodedContentType {
-	case "JSON":
+	if contentType == "JSON" || strings.Contains(contentType, "application/json") {
 		body, err = json.Marshal(bodyParams)
 		if err != nil {
 			return nil, err
 		}
-
-		indexedVarKeys := findIndexedVarKeysInBodyParams(bodyParams)
-		for _, varKey := range indexedVarKeys {
-			bytesToFind := []byte(varKey)
-			bytesToReplace := bytesToFind[:len(bytesToFind)-2]
-			body = bytes.Replace(body, bytesToFind, bytesToReplace, 1)
+		// empty body
+		if len(body) == 2 {
+			body = []byte{}
 		}
-
-	default:
-		return nil, errors.New("Unknown content type \"" + encodedContentType + "\"")
+	} else if contentType == "FORM-DATA" || strings.Contains(contentType, "application/x-www-form-urlencoded") {
+		body = buildFormDataBody(bodyParams)
+	} else {
+		if data, ok := bodyParams["data"]; ok {
+			dataStr := fmt.Sprintf("%v", data)
+			body = []byte(dataStr)
+		} else if data, ok := bodyParams["data:1"]; ok {
+			data1Str := fmt.Sprintf("%v", data)
+			data2Str := fmt.Sprintf("%v", bodyParams["data:2"])
+			body = []byte(data1Str + data2Str)
+		} else {
+			body = []byte{}
+		}
 	}
+
+	indexedVarKeys := findIndexedVarKeysInBodyParams(bodyParams)
+	for _, varKey := range indexedVarKeys {
+		bytesToFind := []byte(varKey)
+		bytesToReplace := bytesToFind[:len(bytesToFind)-2]
+		body = bytes.Replace(body, bytesToFind, bytesToReplace, 1)
+	}
+
 	return body, nil
+}
+
+func buildFormDataBody(bodyParams map[string]interface{}) []byte {
+	params := ""
+	for paramName, paramValue := range bodyParams {
+		paramStr := paramName
+		if paramValue != nil {
+			paramValueStr := fmt.Sprintf("%v", paramValue)
+			paramStr += "=" + paramValueStr
+		}
+		paramStr += "&"
+		params += paramStr
+	}
+	if len(params) > 0 {
+		params = params[:len(params)-1]
+	}
+	return []byte(params)
 }
 
 func findIndexedVarKeysInBodyParams(bodyParams map[string]interface{}) []string {
@@ -88,17 +121,14 @@ func findIndexedVarKeysInBodyParams(bodyParams map[string]interface{}) []string 
 	return varKeys
 }
 
-func buildContentType(encodedContentType string) (string, error) {
-	contentType := ""
-	switch encodedContentType {
+func buildContentType(contentType string) string {
+	switch contentType {
 	case "JSON":
-		contentType += "application/json"
+		return "application/json"
 	case "FORM-DATA":
-		contentType += "application/x-www-form-urlencoded"
-	default:
-		return "", errors.New("Unknown content type \"" + encodedContentType + "\"")
+		return "application/x-www-form-urlencoded"
 	}
-	return contentType, nil
+	return contentType
 }
 
 func buildClient() (*http.Client, error) {
