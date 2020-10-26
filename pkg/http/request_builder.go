@@ -93,7 +93,18 @@ func buildFormDataBody(bodyParams map[string]interface{}) []byte {
 	for paramName, paramValue := range bodyParams {
 		paramStr := paramName
 		if paramValue != nil {
-			paramValueStr := fmt.Sprintf("%v", paramValue)
+			var paramValueStr string
+			switch paramValue.(type) {
+			case map[string]interface{}:
+				paramValueStr = "{"
+				for key, value := range paramValue.(map[string]interface{}) {
+					paramValueStr += key + ":" + fmt.Sprintf("%v", value) + ","
+				}
+				paramValueStr = paramValueStr[:len(paramValueStr)-1]
+				paramValueStr += "}"
+			default:
+				paramValueStr = fmt.Sprintf("%v", paramValue)
+			}
 			paramStr += "=" + paramValueStr
 		}
 		paramStr += "&"
