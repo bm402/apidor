@@ -3,6 +3,7 @@ package http
 import (
 	"bytes"
 	"net/http"
+	"strconv"
 
 	"github.com/bncrypted/apidor/pkg/copy"
 )
@@ -49,11 +50,9 @@ func Init(flags Flags) {
 // CreateRequest is a http function for creating a HTTP request based on request options
 func CreateRequest(requestOptions RequestOptions) (*http.Request, error) {
 	uri := buildURI(requestOptions.BaseURI, requestOptions.Endpoint, requestOptions.RequestParams)
+	contentType := buildContentType(requestOptions.ContentType)
+
 	body, err := buildBody(requestOptions.ContentType, requestOptions.BodyParams)
-	if err != nil {
-		return nil, err
-	}
-	contentType, err := buildContentType(requestOptions.ContentType)
 	if err != nil {
 		return nil, err
 	}
@@ -66,7 +65,12 @@ func CreateRequest(requestOptions RequestOptions) (*http.Request, error) {
 	for headerName, headerValue := range requestOptions.Headers {
 		req.Header.Set(headerName, headerValue)
 	}
-	req.Header.Set("Content-Type", contentType)
+	if len(contentType) > 0 {
+		req.Header.Set("Content-Type", contentType)
+	}
+	if len(body) > 0 {
+		req.Header.Set("Content-Length", strconv.Itoa(len(body)))
+	}
 
 	return req, nil
 }

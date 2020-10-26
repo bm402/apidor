@@ -65,13 +65,6 @@ func Read(filepath string) (Definition, error) {
 }
 
 func (d *Definition) setDefaultValues() {
-	for endpointKey, endpointDetails := range d.API.Endpoints {
-		for endpointOperationIndex, endpointOperationDetails := range endpointDetails {
-			if endpointOperationDetails.ContentType == "" {
-				d.API.Endpoints[endpointKey][endpointOperationIndex].ContentType = "JSON"
-			}
-		}
-	}
 	for varName, varValues := range d.Vars {
 		if varValues.Alias == "" {
 			varValues.Alias = varName
