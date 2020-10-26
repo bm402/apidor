@@ -120,8 +120,7 @@ func substituteLowPrivilegedAndParameterPolluteBodyParams(requestOptions http.Re
 }
 
 func substituteMixedPrivilegedAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions,
-	vars map[string]definition.Variables, varsWrappedInArrays map[string]definition.Variables,
-	varsWrappedInMaps map[string]definition.Variables) []http.RequestOptions {
+	vars map[string]definition.Variables, wrappedVars map[string]definition.Variables) []http.RequestOptions {
 
 	// parameter wrapping on body params
 	substitutedBodyParams := []map[string]interface{}{}
@@ -131,10 +130,7 @@ func substituteMixedPrivilegedAndParameterWrapBodyParams(baseRequestOptions http
 	for _, permutation := range permutations {
 		substitutedBodyParams = append(substitutedBodyParams,
 			substituteMixedPrivilegeBodyParams(baseRequestOptions.BodyParams, varsInBodyParams,
-				varsWrappedInArrays, permutation))
-		substitutedBodyParams = append(substitutedBodyParams,
-			substituteMixedPrivilegeBodyParams(baseRequestOptions.BodyParams, varsInBodyParams,
-				varsWrappedInMaps, permutation))
+				wrappedVars, permutation))
 	}
 
 	substitutedEndpoints := substituteAllMixedPrivilegedPathParams(
@@ -146,15 +142,11 @@ func substituteMixedPrivilegedAndParameterWrapBodyParams(baseRequestOptions http
 }
 
 func substituteLowPrivilegedAndParameterWrapBodyParams(baseRequestOptions http.RequestOptions,
-	vars map[string]definition.Variables, varsWrappedInArrays map[string]definition.Variables,
-	varsWrappedInMaps map[string]definition.Variables) []http.RequestOptions {
+	vars map[string]definition.Variables, wrappedVars map[string]definition.Variables) []http.RequestOptions {
 
 	// parameter wrapping on body params
-	substitutedBodyParams := []map[string]interface{}{}
-	substitutedBodyParams = append(substitutedBodyParams,
-		substituteLowPrivilegedBodyParams(baseRequestOptions.BodyParams, varsWrappedInArrays))
-	substitutedBodyParams = append(substitutedBodyParams,
-		substituteLowPrivilegedBodyParams(baseRequestOptions.BodyParams, varsWrappedInMaps))
+	substitutedBodyParams := []map[string]interface{}{substituteLowPrivilegedBodyParams(
+		baseRequestOptions.BodyParams, wrappedVars)}
 
 	substitutedEndpoints := []string{substituteLowPrivilegedPathParams(
 		baseRequestOptions.Endpoint, vars)}

@@ -24,8 +24,10 @@ const (
 	BPP = "bpp"
 	// MR is a TestCode const for a method replacement test
 	MR = "mr"
-	// PW is a TestCode const for a parameter wrapping test
-	PW = "pw"
+	// RPW is a TestCode const for a request parameter wrapping test
+	RPW = "rpw"
+	// BPW is a TestCode const for a body parameter wrapping test
+	BPW = "bpw"
 	// RPS is a TestCode const for a request parameter substitution test
 	RPS = "rps"
 	// RPSPP is a TestCode const for a request parameter substitution test with parameter pollution
@@ -69,7 +71,7 @@ func (tcs TestCodes) Contains(testCode TestCode) bool {
 func getTestCode(testCodeString string) (TestCode, bool) {
 	testCode := TestCode(testCodeString)
 	switch testCode {
-	case HP, LP, NP, RPP, BPP, MR, PW, RPS, RPSPP, JSON, ALL:
+	case HP, LP, NP, RPP, BPP, MR, RPW, BPW, RPS, RPSPP, JSON, ALL:
 		return testCode, true
 	}
 	return "", false
