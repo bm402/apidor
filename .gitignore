@@ -16,3 +16,4 @@
 
 # Other
 definitions/targets
+*.DS_Store

@@ -55,7 +55,7 @@ func buildBody(contentType string, bodyParams map[string]interface{}) ([]byte, e
 	var err error
 
 	if contentType == "JSON" || strings.Contains(contentType, "application/json") {
-		body, err = json.Marshal(bodyParams)
+		body, err = buildJSONBody(bodyParams)
 		if err != nil {
 			return nil, err
 		}
@@ -86,6 +86,20 @@ func buildBody(contentType string, bodyParams map[string]interface{}) ([]byte, e
 	}
 
 	return body, nil
+}
+
+func buildJSONBody(bodyParams map[string]interface{}) ([]byte, error) {
+	var body []byte
+	var err error
+	if arr, ok := bodyParams["JSON_ARRAY"]; ok {
+		body, err = json.Marshal(arr.([]interface{}))
+	} else if arr, ok := bodyParams["JSON_ARRAY:1"]; ok {
+		arrs := append(arr.([]interface{}), bodyParams["JSON_ARRAY:2"].([]interface{})...)
+		body, err = json.Marshal(arrs)
+	} else {
+		body, err = json.Marshal(bodyParams)
+	}
+	return body, err
 }
 
 func buildFormDataBody(bodyParams map[string]interface{}) []byte {
