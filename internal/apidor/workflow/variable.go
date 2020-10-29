@@ -1,8 +1,8 @@
 package workflow
 
 import (
+	"fmt"
 	"sort"
-	"strconv"
 
 	"github.com/bncrypted/apidor/internal/apidor/permutation"
 	"github.com/bncrypted/apidor/pkg/definition"
@@ -162,10 +162,9 @@ func substituteMixedPrivilegedAndMoveBodyParamsToRequestParams(baseRequestOption
 	// move top-level body params to request params
 	for key, value := range baseRequestOptions.BodyParams {
 		switch value.(type) {
-		case string:
-			baseRequestOptions.RequestParams[key] = value.(string)
-		case int:
-			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		case []interface{}, map[string]interface{}:
+		default:
+			baseRequestOptions.RequestParams[key] = fmt.Sprintf("%v", value)
 		}
 	}
 
@@ -189,10 +188,9 @@ func substituteLowPrivilegedAndMoveBodyParamsToRequestParams(baseRequestOptions 
 	// move top-level body params to request params
 	for key, value := range baseRequestOptions.BodyParams {
 		switch value.(type) {
-		case string:
-			baseRequestOptions.RequestParams[key] = value.(string)
-		case int:
-			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		case []interface{}, map[string]interface{}:
+		default:
+			baseRequestOptions.RequestParams[key] = fmt.Sprintf("%v", value)
 		}
 	}
 
@@ -216,10 +214,9 @@ func substituteMixedPrivilegedAndParameterPolluteBodyParamsToRequestParams(
 	// move top-level body params to request params
 	for key, value := range baseRequestOptions.BodyParams {
 		switch value.(type) {
-		case string:
-			baseRequestOptions.RequestParams[key] = value.(string)
-		case int:
-			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		case []interface{}, map[string]interface{}:
+		default:
+			baseRequestOptions.RequestParams[key] = fmt.Sprintf("%v", value)
 		}
 	}
 
@@ -243,7 +240,9 @@ func substituteMixedPrivilegedAndParameterPolluteBodyParamsToRequestParams(
 		baseRequestOptions.BodyParams, vars)
 
 	// add empty body
-	substitutedBodyParams = append(substitutedBodyParams, map[string]interface{}{})
+	if len(substitutedBodyParams) != 1 || len(substitutedBodyParams[0]) != 0 {
+		substitutedBodyParams = append(substitutedBodyParams, map[string]interface{}{})
+	}
 
 	return createAllRequestOptions(baseRequestOptions, substitutedEndpoints,
 		substitutedRequestParams, substitutedBodyParams)
@@ -255,10 +254,9 @@ func substituteLowPrivilegedAndParameterPolluteBodyParamsToRequestParams(baseReq
 	// move top-level body params to request params
 	for key, value := range baseRequestOptions.BodyParams {
 		switch value.(type) {
-		case string:
-			baseRequestOptions.RequestParams[key] = value.(string)
-		case int:
-			baseRequestOptions.RequestParams[key] = strconv.Itoa(value.(int))
+		case []interface{}, map[string]interface{}:
+		default:
+			baseRequestOptions.RequestParams[key] = fmt.Sprintf("%v", value)
 		}
 	}
 
