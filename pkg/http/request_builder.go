@@ -42,7 +42,7 @@ func buildURI(baseURI string, endpoint string, requestParams map[string]string) 
 			if key[len(key)-2] == ':' && (key[len(key)-1]-'0' >= 0 && key[len(key)-1]-'0' <= 9) {
 				keyWithoutIndex = key[:len(key)-2]
 			}
-			uri += keyWithoutIndex + "=" + requestParams[key] + "&"
+			uri += keyWithoutIndex + "=" + url.QueryEscape(requestParams[key]) + "&"
 		}
 		uri = uri[:len(uri)-1]
 	}
@@ -119,7 +119,7 @@ func buildFormDataBody(bodyParams map[string]interface{}) []byte {
 			default:
 				paramValueStr = fmt.Sprintf("%v", paramValue)
 			}
-			paramStr += "=" + paramValueStr
+			paramStr += "=" + url.QueryEscape(paramValueStr)
 		}
 		paramStr += "&"
 		params += paramStr
