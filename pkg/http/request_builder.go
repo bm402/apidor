@@ -131,16 +131,35 @@ func buildFormDataBody(bodyParams map[string]interface{}) []byte {
 }
 
 func findIndexedVarKeysInBodyParams(bodyParams map[string]interface{}) []string {
+	return findIndexedVarKeysInMap(bodyParams)
+}
+
+func findIndexedVarKeysInMap(mp map[string]interface{}) []string {
 	varKeys := []string{}
-	for key, value := range bodyParams {
+	for key, value := range mp {
 		switch value.(type) {
+		case []interface{}:
+			varKeys = append(varKeys, findIndexedVarKeysInArray(value.([]interface{}))...)
 		case map[string]interface{}:
-			varKeys = append(varKeys, findIndexedVarKeysInBodyParams(value.(map[string]interface{}))...)
+			varKeys = append(varKeys, findIndexedVarKeysInMap(value.(map[string]interface{}))...)
 		default:
 			if len(key) >= 2 && (key[len(key)-2] == ':' && key[len(key)-1]-'0' >= 0 &&
 				key[len(key)-1]-'0' <= 9) {
 				varKeys = append(varKeys, key)
 			}
+		}
+	}
+	return varKeys
+}
+
+func findIndexedVarKeysInArray(arr []interface{}) []string {
+	varKeys := []string{}
+	for _, value := range arr {
+		switch value.(type) {
+		case []interface{}:
+			varKeys = append(varKeys, findIndexedVarKeysInArray(value.([]interface{}))...)
+		case map[string]interface{}:
+			varKeys = append(varKeys, findIndexedVarKeysInMap(value.(map[string]interface{}))...)
 		}
 	}
 	return varKeys
