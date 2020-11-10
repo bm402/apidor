@@ -1,6 +1,8 @@
 package variable
 
-import "strconv"
+import (
+	"fmt"
+)
 
 // FindVarsInString is a variable function for finding any $ delimited variables in a string
 func FindVarsInString(str string) []string {
@@ -83,14 +85,7 @@ func SubstituteVarsInString(str string, vars map[string]interface{}) string {
 	fixedStartIndex := 0
 
 	toString := func(value interface{}) string {
-		var str string
-		switch value.(type) {
-		case int:
-			str = strconv.Itoa(value.(int))
-		case string:
-			str = value.(string)
-		}
-		return str
+		return fmt.Sprintf("%v", value)
 	}
 
 	for curIndex, char := range str {
@@ -149,14 +144,7 @@ func SubstituteVarsInMapOfStrings(mp map[string]string, vars map[string]interfac
 	mapWithVars := make(map[string]string)
 	for key, value := range mp {
 		if varToSubstitute, ok := vars[value]; ok {
-			var strToSubstitute string
-			switch varToSubstitute.(type) {
-			case int:
-				strToSubstitute = strconv.Itoa(varToSubstitute.(int))
-			case string:
-				strToSubstitute = varToSubstitute.(string)
-			}
-			mapWithVars[key] = strToSubstitute
+			mapWithVars[key] = fmt.Sprintf("%v", varToSubstitute)
 		} else {
 			mapWithVars[key] = value
 		}

@@ -75,14 +75,14 @@ func Run(definition model.Definition, flags Flags) {
 			// high privileged request
 			if isRunAllTests || testCodes.Contains(testcode.HP) {
 				if endpointOperationDetails.IsDeleteOperation {
-					logger.TestPrefix(requestID, endpoint, "high-priv")
+					logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "high-priv")
 					logger.TestResult("Skipping delete operation")
 				} else {
 					requestOptions = baseRequestOptions.DeepCopy()
 					requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 						definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.High)
 					requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
-					logger.TestPrefix(requestID, endpoint, "high-priv")
+					logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "high-priv")
 					testEndpoint(requestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 				}
 			}
@@ -94,13 +94,13 @@ func Run(definition model.Definition, flags Flags) {
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
 
 				baseCaseRequestOptions := substituteLowPrivilegedVariables(requestOptions, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "low-priv-perms-base")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-perms-base")
 				baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-perms")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-perms")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -118,14 +118,14 @@ func Run(definition model.Definition, flags Flags) {
 				// normal parameter pollution
 				baseCaseRequestOptions := substituteLowPrivilegedAndParameterPolluteRequestParams(
 					requestOptions, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "low-priv-request-pp-base")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp-base")
 				baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteRequestParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-request-pp")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -143,14 +143,14 @@ func Run(definition model.Definition, flags Flags) {
 
 				baseCaseRequestOptions = substituteLowPrivilegedAndParameterPolluteRequestParams(
 					requestOptionsWithSquareBrackets, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "low-priv-request-pp-sb-base")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp-sb-base")
 				baseStatus = testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteRequestParams(
 						requestOptionsWithSquareBrackets, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-request-pp-sb")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp-sb")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -167,14 +167,14 @@ func Run(definition model.Definition, flags Flags) {
 
 				baseCaseRequestOptions := substituteLowPrivilegedAndParameterPolluteBodyParams(
 					requestOptions, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "low-priv-body-pp-base")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pp-base")
 				baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteBodyParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-body-pp")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pp")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -199,14 +199,14 @@ func Run(definition model.Definition, flags Flags) {
 
 				baseCaseRequestOptions := substituteLowPrivilegedVariables(
 					requestOptionsWithSquareBrackets, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "low-priv-request-pw-arr-sb-base")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-arr-sb-base")
 				baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(
 						requestOptionsWithSquareBrackets, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-request-pw-arr-sb")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-arr-sb")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -224,14 +224,14 @@ func Run(definition model.Definition, flags Flags) {
 
 				baseCaseRequestOptions = substituteLowPrivilegedVariables(
 					requestOptionsWithSquareBrackets, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "low-priv-request-pw-obj-sb-base")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-sb-base")
 				baseStatus = testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(
 						requestOptionsWithSquareBrackets, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-request-pw-obj-sb")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-sb")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -249,14 +249,14 @@ func Run(definition model.Definition, flags Flags) {
 
 				baseCaseRequestOptions = substituteLowPrivilegedVariables(
 					requestOptionsWithDotNotation, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "low-priv-request-pw-obj-dn-base")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-dn-base")
 				baseStatus = testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK, []string{}, minRequestDuration)
 
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(
 						requestOptionsWithDotNotation, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-request-pw-obj-dn")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-dn")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -277,7 +277,7 @@ func Run(definition model.Definition, flags Flags) {
 				isBaseStatus2xx := false
 
 				for _, baseCaseRequestOptions := range collectedBaseCaseRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-body-pw-arr-base")
+					logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-arr-base")
 					baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK,
 						[]string{}, minRequestDuration)
 					if is2xx(baseStatus) {
@@ -290,7 +290,7 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterWrapBodyParams(
 						requestOptions, definition.Vars, wrappedVarsInArrays)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-body-pw-arr")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-arr")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -304,7 +304,7 @@ func Run(definition model.Definition, flags Flags) {
 				isBaseStatus2xx = false
 
 				for _, baseCaseRequestOptions := range collectedBaseCaseRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-body-pw-obj-base")
+					logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-obj-base")
 					baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK,
 						[]string{}, minRequestDuration)
 					if is2xx(baseStatus) {
@@ -317,7 +317,7 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterWrapBodyParams(
 						requestOptions, definition.Vars, wrappedVarsInMaps)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-body-pw-obj")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-obj")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -337,7 +337,7 @@ func Run(definition model.Definition, flags Flags) {
 				isBaseStatus2xx := false
 
 				for _, baseCaseRequestOptions := range collectedBaseCaseRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-rps-pp-base")
+					logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps-pp-base")
 					baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK,
 						[]string{}, minRequestDuration)
 					if is2xx(baseStatus) {
@@ -350,7 +350,7 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteBodyParamsToRequestParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-rps-pp")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps-pp")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -368,7 +368,7 @@ func Run(definition model.Definition, flags Flags) {
 				isBaseStatus2xx := false
 
 				for _, baseCaseRequestOptions := range collectedBaseCaseRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-rps-base")
+					logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps-base")
 					baseStatus := testEndpoint(baseCaseRequestOptions, verifyResponseExpectedOK,
 						[]string{}, minRequestDuration)
 					if is2xx(baseStatus) {
@@ -381,7 +381,7 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndMoveBodyParamsToRequestParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpoint, "low-priv-rps")
+						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps")
 						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 							bannedResponseWords, minRequestDuration)
 					}
@@ -398,7 +398,7 @@ func Run(definition model.Definition, flags Flags) {
 				requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 				collectedRequestOptions = substituteUnusedMethods(requestOptions, unusedEndpointMethods)
 				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(requestID, endpoint, "low-priv-msub")
+					logger.TestPrefix(requestID, requestOptions.Method, endpoint, "low-priv-msub")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}
@@ -411,7 +411,7 @@ func Run(definition model.Definition, flags Flags) {
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
 				requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 				requestOptions.Endpoint += ".json"
-				logger.TestPrefix(requestID, endpoint, "low-priv-json")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-json")
 				testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 					bannedResponseWords, minRequestDuration)
 			}
@@ -421,7 +421,7 @@ func Run(definition model.Definition, flags Flags) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = removeAuthHeaderFromRequestOptions(requestOptions, definition.AuthDetails.HeaderName)
 				requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
-				logger.TestPrefix(requestID, endpoint, "no-priv")
+				logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "no-priv")
 				testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 					bannedResponseWords, minRequestDuration)
 			}

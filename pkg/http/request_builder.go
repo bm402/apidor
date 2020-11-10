@@ -42,7 +42,7 @@ func buildURI(baseURI string, endpoint string, requestParams map[string]string) 
 			if key[len(key)-2] == ':' && (key[len(key)-1]-'0' >= 0 && key[len(key)-1]-'0' <= 9) {
 				keyWithoutIndex = key[:len(key)-2]
 			}
-			uri += keyWithoutIndex + "=" + requestParams[key] + "&"
+			uri += keyWithoutIndex + "=" + url.QueryEscape(requestParams[key]) + "&"
 		}
 		uri = uri[:len(uri)-1]
 	}
@@ -119,7 +119,7 @@ func buildFormDataBody(bodyParams map[string]interface{}) []byte {
 			default:
 				paramValueStr = fmt.Sprintf("%v", paramValue)
 			}
-			paramStr += "=" + paramValueStr
+			paramStr += "=" + url.QueryEscape(paramValueStr)
 		}
 		paramStr += "&"
 		params += paramStr
@@ -131,16 +131,35 @@ func buildFormDataBody(bodyParams map[string]interface{}) []byte {
 }
 
 func findIndexedVarKeysInBodyParams(bodyParams map[string]interface{}) []string {
+	return findIndexedVarKeysInMap(bodyParams)
+}
+
+func findIndexedVarKeysInMap(mp map[string]interface{}) []string {
 	varKeys := []string{}
-	for key, value := range bodyParams {
+	for key, value := range mp {
 		switch value.(type) {
+		case []interface{}:
+			varKeys = append(varKeys, findIndexedVarKeysInArray(value.([]interface{}))...)
 		case map[string]interface{}:
-			varKeys = append(varKeys, findIndexedVarKeysInBodyParams(value.(map[string]interface{}))...)
+			varKeys = append(varKeys, findIndexedVarKeysInMap(value.(map[string]interface{}))...)
 		default:
 			if len(key) >= 2 && (key[len(key)-2] == ':' && key[len(key)-1]-'0' >= 0 &&
 				key[len(key)-1]-'0' <= 9) {
 				varKeys = append(varKeys, key)
 			}
+		}
+	}
+	return varKeys
+}
+
+func findIndexedVarKeysInArray(arr []interface{}) []string {
+	varKeys := []string{}
+	for _, value := range arr {
+		switch value.(type) {
+		case []interface{}:
+			varKeys = append(varKeys, findIndexedVarKeysInArray(value.([]interface{}))...)
+		case map[string]interface{}:
+			varKeys = append(varKeys, findIndexedVarKeysInMap(value.(map[string]interface{}))...)
 		}
 	}
 	return varKeys

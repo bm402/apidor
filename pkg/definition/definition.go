@@ -61,6 +61,7 @@ func Read(filepath string) (Definition, error) {
 	}
 
 	definition.setDefaultValues()
+	definition.normaliseBodyParamMaps()
 	return definition, nil
 }
 
@@ -71,4 +72,53 @@ func (d *Definition) setDefaultValues() {
 			d.Vars[varName] = varValues
 		}
 	}
+}
+
+func (d *Definition) normaliseBodyParamMaps() {
+	for endpointName, endpointDetails := range d.API.Endpoints {
+		for endpointOperationIdx, endpointOperationDetails := range endpointDetails {
+			bodyParams := make(map[string]interface{})
+			for paramName, paramValue := range endpointOperationDetails.BodyParams {
+				switch paramValue.(type) {
+				case []interface{}:
+					bodyParams[paramName] = normaliseArray(paramValue.([]interface{}))
+				case map[interface{}]interface{}:
+					bodyParams[paramName] = normaliseMap(paramValue.(map[interface{}]interface{}))
+				default:
+					bodyParams[paramName] = paramValue
+				}
+			}
+			d.API.Endpoints[endpointName][endpointOperationIdx].BodyParams = bodyParams
+		}
+	}
+}
+
+func normaliseMap(mp map[interface{}]interface{}) map[string]interface{} {
+	normalisedMap := make(map[string]interface{})
+	for key, value := range mp {
+		switch value.(type) {
+		case []interface{}:
+			normalisedMap[key.(string)] = normaliseArray(value.([]interface{}))
+		case map[interface{}]interface{}:
+			normalisedMap[key.(string)] = normaliseMap(value.(map[interface{}]interface{}))
+		default:
+			normalisedMap[key.(string)] = value
+		}
+	}
+	return normalisedMap
+}
+
+func normaliseArray(arr []interface{}) []interface{} {
+	normalisedArr := make([]interface{}, len(arr))
+	for idx, value := range arr {
+		switch value.(type) {
+		case []interface{}:
+			normalisedArr[idx] = normaliseArray(value.([]interface{}))
+		case map[interface{}]interface{}:
+			normalisedArr[idx] = normaliseMap(value.(map[interface{}]interface{}))
+		default:
+			normalisedArr[idx] = value
+		}
+	}
+	return normalisedArr
 }

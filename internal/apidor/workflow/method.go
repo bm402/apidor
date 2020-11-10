@@ -8,26 +8,19 @@ import (
 func findUnusedEndpointMethods(globalMethods []string,
 	endpointOperations []definition.EndpointDetails) []string {
 
-	usedEndpointMethods := []string{}
+	usedMethods := make(map[string]bool)
 	for _, endpointOperationDetails := range endpointOperations {
-		usedEndpointMethods = append(usedEndpointMethods, endpointOperationDetails.Method)
+		usedMethods[endpointOperationDetails.Method] = true
 	}
 
-	unusedEndpointMethods := []string{}
+	unusedMethods := []string{}
 	for _, globalMethod := range globalMethods {
-		used := false
-		for _, usedEndpointMethod := range usedEndpointMethods {
-			if globalMethod == usedEndpointMethod {
-				used = true
-				break
-			}
-		}
-		if !used {
-			unusedEndpointMethods = append(unusedEndpointMethods, globalMethod)
+		if usedMethods[globalMethod] != true {
+			unusedMethods = append(unusedMethods, globalMethod)
 		}
 	}
 
-	return unusedEndpointMethods
+	return unusedMethods
 }
 
 func substituteUnusedMethods(baseRequestOptions http.RequestOptions,
