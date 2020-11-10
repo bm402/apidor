@@ -2,6 +2,7 @@ package workflow
 
 import (
 	externalhttp "net/http"
+	"reflect"
 	"strconv"
 	"strings"
 	"time"
@@ -100,9 +101,11 @@ func Run(definition model.Definition, flags Flags) {
 				if is2xx(baseStatus) || flags.IsIgnoreBaseCase {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-perms")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, baseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-perms")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase case failed, skipping rest of [low-priv-perms]")
@@ -110,7 +113,8 @@ func Run(definition model.Definition, flags Flags) {
 			}
 
 			// parameter pollution in request params
-			if isRunAllTests || testCodes.Contains(testcode.RPP) {
+			if len(baseRequestOptions.RequestParams) > 0 && (isRunAllTests || testCodes.Contains(testcode.RPP)) {
+
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
@@ -125,9 +129,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteRequestParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, baseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase case failed, skipping rest of [low-priv-request-pp]")
@@ -150,9 +156,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteRequestParams(
 						requestOptionsWithSquareBrackets, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp-sb")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, baseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pp-sb")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase case failed, skipping rest of [low-priv-request-pp-sb]")
@@ -160,7 +168,7 @@ func Run(definition model.Definition, flags Flags) {
 			}
 
 			// parameter pollution in body params
-			if isRunAllTests || testCodes.Contains(testcode.BPP) {
+			if len(baseRequestOptions.BodyParams) > 0 && (isRunAllTests || testCodes.Contains(testcode.BPP)) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
@@ -174,9 +182,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteBodyParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pp")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, baseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pp")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase case failed, skipping rest of [low-priv-body-pp]")
@@ -184,7 +194,7 @@ func Run(definition model.Definition, flags Flags) {
 			}
 
 			// parameter wrapping in request params
-			if isRunAllTests || testCodes.Contains(testcode.RPW) {
+			if len(baseRequestOptions.RequestParams) > 0 && (isRunAllTests || testCodes.Contains(testcode.RPW)) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
@@ -206,9 +216,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(
 						requestOptionsWithSquareBrackets, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-arr-sb")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, baseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-arr-sb")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase case failed, skipping rest of [low-priv-request-pw-arr-sb]")
@@ -231,9 +243,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(
 						requestOptionsWithSquareBrackets, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-sb")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, baseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-sb")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase case failed, skipping rest of [low-priv-request-pw-obj-sb]")
@@ -256,9 +270,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedVariables(
 						requestOptionsWithDotNotation, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-dn")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, baseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-request-pw-obj-dn")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase case failed, skipping rest of [low-priv-request-pw-obj-dn]")
@@ -266,7 +282,7 @@ func Run(definition model.Definition, flags Flags) {
 			}
 
 			// parameter wrapping in body params
-			if isRunAllTests || testCodes.Contains(testcode.BPW) {
+			if len(baseRequestOptions.BodyParams) > 0 && (isRunAllTests || testCodes.Contains(testcode.BPW)) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
@@ -290,9 +306,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterWrapBodyParams(
 						requestOptions, definition.Vars, wrappedVarsInArrays)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-arr")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, collectedBaseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-arr")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase cases failed, skipping rest of [low-priv-body-pw-arr]")
@@ -317,9 +335,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterWrapBodyParams(
 						requestOptions, definition.Vars, wrappedVarsInMaps)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-obj")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, collectedBaseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-body-pw-obj")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase cases failed, skipping rest of [low-priv-body-pw-obj]")
@@ -327,7 +347,7 @@ func Run(definition model.Definition, flags Flags) {
 			}
 
 			// request parameter substitution
-			if isRunAllTests || testCodes.Contains(testcode.RPSPP) {
+			if len(baseRequestOptions.RequestParams) > 0 && (isRunAllTests || testCodes.Contains(testcode.RPSPP)) {
 				requestOptions = baseRequestOptions.DeepCopy()
 				requestOptions = addAuthHeaderToRequestOptions(requestOptions, definition.AuthDetails.HeaderName,
 					definition.AuthDetails.HeaderValuePrefix, definition.AuthDetails.Low)
@@ -350,9 +370,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndParameterPolluteBodyParamsToRequestParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps-pp")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, collectedBaseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps-pp")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase cases failed, skipping rest of [low-priv-rps-pp]")
@@ -381,9 +403,11 @@ func Run(definition model.Definition, flags Flags) {
 					collectedRequestOptions = substituteMixedPrivilegedAndMoveBodyParamsToRequestParams(
 						requestOptions, definition.Vars)
 					for _, requestOptions := range collectedRequestOptions {
-						logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps")
-						testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
-							bannedResponseWords, minRequestDuration)
+						if !isRequestOptionsBaseCase(requestOptions, collectedBaseCaseRequestOptions) {
+							logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-rps")
+							testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
+								bannedResponseWords, minRequestDuration)
+						}
 					}
 				} else {
 					logger.Message("\tBase cases failed, skipping rest of [low-priv-rps]")
@@ -476,4 +500,23 @@ func verifyEndpoint(endpointCode string, endpoints map[string][]model.EndpointDe
 
 func is2xx(status int) bool {
 	return status/100 == 2
+}
+
+func isRequestOptionsBaseCase(requestOptions http.RequestOptions, baseCaseRequestOptions interface{}) bool {
+	delete(requestOptions.Headers, "X-Apidor-Request-ID")
+	switch baseCaseRequestOptions.(type) {
+	case []http.RequestOptions:
+		for _, baseCaseRequestOption := range baseCaseRequestOptions.([]http.RequestOptions) {
+			delete(baseCaseRequestOption.Headers, "X-Apidor-Request-ID")
+			if reflect.DeepEqual(requestOptions, baseCaseRequestOption) {
+				return true
+			}
+		}
+	default:
+		delete(baseCaseRequestOptions.(http.RequestOptions).Headers, "X-Apidor-Request-ID")
+		if reflect.DeepEqual(requestOptions, baseCaseRequestOptions) {
+			return true
+		}
+	}
+	return false
 }

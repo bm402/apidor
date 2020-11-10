@@ -17,10 +17,6 @@ func GetAllCombinationsOfHighAndLowPrivilege(n int) []string {
 	permutations := []string{}
 	curPermutation := ""
 	fullPermutationsBuilder(&permutations, &curPermutation, n, 0)
-
-	if len(permutations) > 1 {
-		permutations = permutations[:len(permutations)-1]
-	}
 	setPermutationsInCache(cacheKey, permutations)
 
 	return permutations

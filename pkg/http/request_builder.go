@@ -176,7 +176,7 @@ func buildContentType(contentType string) string {
 }
 
 func buildClient() (*http.Client, error) {
-	timeout := time.Duration(5 * time.Second)
+	timeout := time.Duration(10 * time.Second)
 	transport, err := buildClientTransport()
 	if err != nil {
 		return nil, err
