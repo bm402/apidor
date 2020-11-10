@@ -398,7 +398,7 @@ func Run(definition model.Definition, flags Flags) {
 				requestOptions = substituteHighPrivilegedVariables(requestOptions, definition.Vars)
 				collectedRequestOptions = substituteUnusedMethods(requestOptions, unusedEndpointMethods)
 				for _, requestOptions := range collectedRequestOptions {
-					logger.TestPrefix(requestID, endpointOperationDetails.Method, endpoint, "low-priv-msub")
+					logger.TestPrefix(requestID, requestOptions.Method, endpoint, "low-priv-msub")
 					testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 						bannedResponseWords, minRequestDuration)
 				}
