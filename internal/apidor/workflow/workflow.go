@@ -449,6 +449,8 @@ func Run(definition model.Definition, flags Flags) {
 				testEndpoint(requestOptions, verifyResponseExpectedUnauthorised,
 					bannedResponseWords, minRequestDuration)
 			}
+
+			logger.Message("")
 		}
 	}
 }

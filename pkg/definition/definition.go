@@ -1,6 +1,7 @@
 package definition
 
 import (
+	"fmt"
 	"io/ioutil"
 
 	"gopkg.in/yaml.v2"
@@ -98,11 +99,11 @@ func normaliseMap(mp map[interface{}]interface{}) map[string]interface{} {
 	for key, value := range mp {
 		switch value.(type) {
 		case []interface{}:
-			normalisedMap[key.(string)] = normaliseArray(value.([]interface{}))
+			normalisedMap[fmt.Sprintf("%v", key)] = normaliseArray(value.([]interface{}))
 		case map[interface{}]interface{}:
-			normalisedMap[key.(string)] = normaliseMap(value.(map[interface{}]interface{}))
+			normalisedMap[fmt.Sprintf("%v", key)] = normaliseMap(value.(map[interface{}]interface{}))
 		default:
-			normalisedMap[key.(string)] = value
+			normalisedMap[fmt.Sprintf("%v", key)] = value
 		}
 	}
 	return normalisedMap
